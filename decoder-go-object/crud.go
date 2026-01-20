@@ -88,11 +88,21 @@ func WriteTrivialReflectValue[E nbt.WriteTrivialWithPos](kind reflect.Kind, val 
 	return fmt.Errorf("not a trivial nbt value: %v", val)
 }
 
-func GetArrayElementWritor[E nbt.WriteTrivialWithPos](val reflect.Value, reciver E) (
+func GetArrayElementWritor(val reflect.Value, reciver nbt.EncoderHighLevel) (
 	et nbt.HighLevelValueType,
 	writeElem func(int) error,
 ) {
-	switch val.Type().Elem().Kind() {
+	elemType := val.Type().Elem()
+	if elemType.Implements(reflect.TypeOf((*DecoderOverride)(nil)).Elem()) {
+		it := reflect.New(elemType).Elem().Interface().(DecoderOverride)
+		et = it.GetNBType()
+		writeElem = func(i int) error {
+			return val.Index(i).Interface().(DecoderOverride).DecodeTo(nbt.ValuePosArray, reciver, nil)
+		}
+		return
+	}
+
+	switch elemType.Kind() {
 	case reflect.Int8:
 		et = nbt.TrivialByte
 		writeElem = func(i int) error {

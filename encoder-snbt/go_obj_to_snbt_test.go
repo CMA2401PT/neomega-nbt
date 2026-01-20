@@ -3,6 +3,7 @@ package encoder_snbt
 import (
 	"bufio"
 	"bytes"
+	nbt "neomega-nbt"
 	decoder_go_object "neomega-nbt/decoder-go-object"
 	"testing"
 )
@@ -145,6 +146,16 @@ func TestSnbtArrEncode(t *testing.T) {
 
 type MyString string
 type MyTypeInt8 int8
+type MyTypeInt8Override int8
+
+func (MyTypeInt8Override) GetNBType() nbt.HighLevelValueType {
+	return nbt.TrivialByte
+}
+
+func (i MyTypeInt8Override) DecodeTo(valuePos nbt.ValuePos, encoder nbt.EncoderHighLevel, getChildDecoder decoder_go_object.GetDecoderFunc) error {
+	return encoder.WriteInt8(int8(i)+10, valuePos)
+}
+
 type MyTypeInt16 int16
 type MyTypeInt32 int32
 type MyTypeInt64 int64
@@ -198,6 +209,9 @@ func TestSnbtEncodeWithCast(t *testing.T) {
 	assertVal(MyTypeInt32(2401), `2401`)
 	assertVal(MyTypeInt32(-2401), `-2401`)
 
+	assertVal(MyTypeInt8Override(1), `11b`)
+	assertValStrict([]MyTypeInt8Override{1, 2, 3}, `[11b, 12b, 13b]`)
+	assertVal([]MyTypeInt8Override{1, 2, 3}, `[B; 11, 12, 13]`)
 	assertVal(MyTypeInt8(0), `0b`)
 
 	assertVal(MyTypeInt8(3), `3b`)
