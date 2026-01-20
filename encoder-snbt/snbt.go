@@ -71,7 +71,7 @@ func (e SnbtEncoderHighLevel[W]) EndComplexCompound() error {
 func (e SnbtEncoderHighLevel[W]) BeginAndEndComplexEmptyList() error {
 	return writeString(e.w, "[]")
 }
-func (e SnbtEncoderHighLevel[W]) BeginComplexList(valueType nbt.HighLevelValueType, len int) error {
+func (e SnbtEncoderHighLevel[W]) BeginComplexList(valueType nbt.HighLevelValueType, len int, typeErase bool) error {
 	return writeString(e.w, "[")
 }
 func (e SnbtEncoderHighLevel[W]) NextListElement(valueType nbt.HighLevelValueType) error {

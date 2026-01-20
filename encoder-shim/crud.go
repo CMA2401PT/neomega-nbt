@@ -215,16 +215,6 @@ func (fa *EncoderShim[HL]) WriteInt16(v int16) error {
 	}
 	return nil
 }
-func (fa *EncoderShim[HL]) WriteUint16(v uint16) error {
-	if err := fa.HighLevelEncoder.WriteUint16(v, fa.ValuePos()); err != nil {
-		return err
-	}
-	if err := fa.WriteNormalValue(EncodeStateValueInt16); err != nil {
-		return err
-	}
-
-	return nil
-}
 func (fa *EncoderShim[HL]) WriteFloat32(v float32) error {
 	if err := fa.HighLevelEncoder.WriteFloat32(v, fa.ValuePos()); err != nil {
 		return err
@@ -261,14 +251,6 @@ func (fa *EncoderShim[HL]) WriteInt8(v int8) error {
 	}
 	return fa.WriteNumberValue(EncodeStateValueInt8)
 }
-func (fa *EncoderShim[HL]) WriteUint8(v uint8) error {
-	if fa.CanWriteNumberValue(EncodeStateValueInt8) {
-		if err := fa.HighLevelEncoder.WriteUint8(v, fa.ValuePos()); err != nil {
-			return err
-		}
-	}
-	return fa.WriteNumberValue(EncodeStateValueInt8)
-}
 func (fa *EncoderShim[HL]) WriteInt32(v int32) error {
 	if fa.CanWriteNumberValue(EncodeStateValueInt32) {
 		if err := fa.HighLevelEncoder.WriteInt32(v, fa.ValuePos()); err != nil {
@@ -277,25 +259,9 @@ func (fa *EncoderShim[HL]) WriteInt32(v int32) error {
 	}
 	return fa.WriteNumberValue(EncodeStateValueInt32)
 }
-func (fa *EncoderShim[HL]) WriteUint32(v uint32) error {
-	if fa.CanWriteNumberValue(EncodeStateValueInt32) {
-		if err := fa.HighLevelEncoder.WriteUint32(v, fa.ValuePos()); err != nil {
-			return err
-		}
-	}
-	return fa.WriteNumberValue(EncodeStateValueInt32)
-}
 func (fa *EncoderShim[HL]) WriteInt64(v int64) error {
 	if fa.CanWriteNumberValue(EncodeStateValueInt64) {
 		if err := fa.HighLevelEncoder.WriteInt64(v, fa.ValuePos()); err != nil {
-			return err
-		}
-	}
-	return fa.WriteNumberValue(EncodeStateValueInt64)
-}
-func (fa *EncoderShim[HL]) WriteUint64(v uint64) error {
-	if fa.CanWriteNumberValue(EncodeStateValueInt64) {
-		if err := fa.HighLevelEncoder.WriteUint64(v, fa.ValuePos()); err != nil {
 			return err
 		}
 	}

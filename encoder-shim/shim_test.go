@@ -28,7 +28,7 @@ func _TestEncoderRestriction(t *testing.T, makeEncoder func() interface {
 	e := makeEncoder()
 	ok(e.WriteType(nbt.TagByte))
 	ok(e.WriteTag("tag"))
-	ok(e.WriteUint8(0))
+	ok(e.WriteInt8(0))
 	done(e.Done())
 
 	e = makeEncoder()
@@ -56,7 +56,7 @@ func _TestEncoderRestriction(t *testing.T, makeEncoder func() interface {
 	ok(e.WriteTag("tag"))
 	ok(e.WriteLen(3))
 	ok(e.WriteInt8(1))
-	ok(e.WriteUint8(2))
+	ok(e.WriteInt8(2))
 	ok(e.WriteInt8(3))
 	done(e.Done())
 
@@ -72,8 +72,8 @@ func _TestEncoderRestriction(t *testing.T, makeEncoder func() interface {
 	ok(e.WriteTag("tag"))
 	ok(e.WriteLen(3))
 	ok(e.WriteInt32(1))
-	ok(e.WriteUint32(2))
-	ok(e.WriteUint32(3))
+	ok(e.WriteInt32(2))
+	ok(e.WriteInt32(3))
 	done(e.Done())
 
 	// long array
@@ -88,8 +88,8 @@ func _TestEncoderRestriction(t *testing.T, makeEncoder func() interface {
 	ok(e.WriteTag("tag"))
 	ok(e.WriteLen(3))
 	ok(e.WriteInt64(1))
-	ok(e.WriteUint64(2))
-	ok(e.WriteUint64(3))
+	ok(e.WriteInt64(2))
+	ok(e.WriteInt64(3))
 	done(e.Done())
 
 	// list

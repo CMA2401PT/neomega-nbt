@@ -14,25 +14,7 @@ func (e SnbtEncoderHighLevel[W]) WriteInt8(v int8, p nbt.ValuePos) error {
 	}
 	return e.w.WriteByte('b')
 }
-func (e SnbtEncoderHighLevel[W]) WriteUint8(v uint8, p nbt.ValuePos) error {
-	if err := writeInt(e.w, v); err != nil {
-		return err
-	}
-	if p.InArray() {
-		return nil
-	}
-	return e.w.WriteByte('b')
-}
 func (e SnbtEncoderHighLevel[W]) WriteInt16(v int16, p nbt.ValuePos) error {
-	if err := writeInt(e.w, v); err != nil {
-		return err
-	}
-	if p.InArray() {
-		return nil
-	}
-	return e.w.WriteByte('s')
-}
-func (e SnbtEncoderHighLevel[W]) WriteUint16(v uint16, p nbt.ValuePos) error {
 	if err := writeInt(e.w, v); err != nil {
 		return err
 	}
@@ -50,21 +32,9 @@ func (e SnbtEncoderHighLevel[W]) WriteInt64(v int64, p nbt.ValuePos) error {
 	}
 	return e.w.WriteByte('l')
 }
-func (e SnbtEncoderHighLevel[W]) WriteUint64(v uint64, p nbt.ValuePos) error {
-	if err := writeInt(e.w, v); err != nil {
-		return err
-	}
-	if p.InArray() {
-		return nil
-	}
-	return e.w.WriteByte('l')
-}
 
 // 无论何时，int后都没有类型标注
 func (e SnbtEncoderHighLevel[W]) WriteInt32(v int32, p nbt.ValuePos) error {
-	return writeInt(e.w, v)
-}
-func (e SnbtEncoderHighLevel[W]) WriteUint32(v uint32, p nbt.ValuePos) error {
 	return writeInt(e.w, v)
 }
 

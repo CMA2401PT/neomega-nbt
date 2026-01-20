@@ -173,4 +173,6 @@ const (
 	FLAG_SUPPORT_TYPE_ERASE = Flag("FLAG_SUPPORT_TYPE_ERASE")
 	// 会忽略实际传入的元素数量
 	FLAG_OMIT_LIST_LEN = Flag("FLAG_OMIT_LIST_LEN")
+	// 会忽略实际传入的元素数量
+	FLAG_OMIT_ARRAY_LEN = Flag("FLAG_OMIT_ARRAY_LEN")
 )

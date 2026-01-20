@@ -54,7 +54,7 @@ func _TestEncoderRestriction(t *testing.T, makeEncoder func() neomega_nbt.Encode
 	e := makeEncoder()
 	ok(e.WriteType(neomega_nbt.TagByte))
 	ok(e.WriteTag("tag"))
-	ok(e.WriteUint8(0))
+	ok(e.WriteInt8(0))
 	done(e.Finish())
 
 	e = makeEncoder()
@@ -82,7 +82,7 @@ func _TestEncoderRestriction(t *testing.T, makeEncoder func() neomega_nbt.Encode
 	ok(e.WriteTag("tag"))
 	ok(e.WriteLen(3))
 	ok(e.WriteInt8(4))
-	ok(e.WriteUint8(2))
+	ok(e.WriteInt8(2))
 	ok(e.WriteInt8(3))
 	done(e.Finish())
 
@@ -98,8 +98,8 @@ func _TestEncoderRestriction(t *testing.T, makeEncoder func() neomega_nbt.Encode
 	ok(e.WriteTag("tag"))
 	ok(e.WriteLen(3))
 	ok(e.WriteInt32(1))
-	ok(e.WriteUint32(2))
-	ok(e.WriteUint32(3))
+	ok(e.WriteInt32(2))
+	ok(e.WriteInt32(3))
 	done(e.Finish())
 
 	// long array
@@ -114,8 +114,8 @@ func _TestEncoderRestriction(t *testing.T, makeEncoder func() neomega_nbt.Encode
 	ok(e.WriteTag("tag"))
 	ok(e.WriteLen(3))
 	ok(e.WriteInt64(1))
-	ok(e.WriteUint64(2))
-	ok(e.WriteUint64(3))
+	ok(e.WriteInt64(2))
+	ok(e.WriteInt64(3))
 	done(e.Finish())
 
 	// list

@@ -40,13 +40,9 @@ type Decoder interface {
 type WriteTrivial interface {
 	// 写入常规值
 	WriteInt8(int8) error
-	WriteUint8(uint8) error
 	WriteInt16(int16) error
-	WriteUint16(uint16) error
 	WriteInt32(int32) error
-	WriteUint32(uint32) error
 	WriteInt64(int64) error
-	WriteUint64(uint64) error
 	WriteFloat32(float32) error
 	WriteFloat64(float64) error
 	WriteString(string) error
@@ -92,10 +88,11 @@ type EncoderHighLevel interface {
 	// BeginComplexCompound , BeginComplexArray, BeginComplexList(BeginAndEndComplexEmptyList)
 	// 另外，由于 snbt 的存在以及 java 事实上的类型擦除，所以接下来的数据可能与报告类型不同
 	// 若可以接受此类情况，应当在 HasFlag 中标记 FLAG_SUPPORT_TYPE_ERASE
+	// 此时，传入的类型为第一个 element 的类型，并设置 type erase 为 true
 	// 在一些情况下，传入元素数量可能与开始时报告的不同，
 	// 若支持这种情况（比如 go 的 slice 可以动态扩容）
 	// 应当在 HasFlag 中标记 FLAG_OMIT_LIST_LEN
-	BeginComplexList(valueType HighLevelValueType, len int) error
+	BeginComplexList(valueType HighLevelValueType, len int, typeErase bool) error
 	// 在每两个 list 元素间被调用，即逗号位置
 	// 下一个元素的类型被报告，因为可能类型发生变化
 	// 若无法接受类型变化则应当回 error
@@ -131,13 +128,9 @@ type WriteTrivialWithPos interface {
 	// 写入常规值，但是附加了是否在 list，array 中的信息
 	// 这些信息在很多时候很有用，因为对于 list，array 针对性的优化很好做
 	WriteInt8(int8, ValuePos) error
-	WriteUint8(uint8, ValuePos) error
 	WriteInt16(int16, ValuePos) error
-	WriteUint16(uint16, ValuePos) error
 	WriteInt32(int32, ValuePos) error
-	WriteUint32(uint32, ValuePos) error
 	WriteInt64(int64, ValuePos) error
-	WriteUint64(uint64, ValuePos) error
 	WriteFloat32(float32, ValuePos) error
 	WriteFloat64(float64, ValuePos) error
 	WriteString(string, ValuePos) error

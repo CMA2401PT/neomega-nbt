@@ -23,11 +23,16 @@ type DecodeOption struct {
 	SliceAsArray bool
 	// SortMapKey=false 时，map 的键值是随机访问的，否则会按字母序先排序
 	SortMapKey bool
+	// 一般为 "nbt" 即当存在这个标签时，使用标签指定的名字
+	TagName string
 }
 
 func HighLevelDecodeTo[R nbt.EncoderHighLevel](
 	orig any, reciver R, opt DecodeOption,
 ) error {
+	if opt.TagName == "" {
+		opt.TagName = "nbt"
+	}
 	return HighLevelDecodeElemTo(orig, reciver, nbt.ValuePosCompoundOrRoot, func(hlvt nbt.HighLevelValueType) error {
 		return reciver.WriteRootTag(opt.RootTag, hlvt)
 	}, opt)
@@ -62,13 +67,13 @@ func HighLevelDecodeUpackedElemTo[R nbt.EncoderHighLevel](
 		return WriteTrivialReflectValue(kind, val, reciver, vp)
 	}
 	if vt.IsArray() {
-		return HighLevelDecodeArrayTo(val, kind, reciver, vp, writeType, opt)
+		return HighLevelDecodeArrayTo(orig, val, kind, reciver, opt)
 	}
 	if vt.IsList() {
-		HighLevelDecodeListTo(val, kind, reciver, vp, writeType, opt)
+		HighLevelDecodeListTo(orig, val, kind, reciver, opt)
 	}
 	if vt.IsCompound() {
-		return HighLevelDecodeCompoundTo(val, kind, reciver, vp, writeType, opt)
+		return HighLevelDecodeCompoundTo(val, kind, reciver, opt)
 	}
 	return nil
 }
@@ -87,28 +92,40 @@ func UnpackAny(orig any, sliceAsArray bool) (any, reflect.Value, reflect.Kind, n
 }
 
 func HighLevelDecodeListTo[R nbt.EncoderHighLevel](
+	orig any,
 	val reflect.Value, kind reflect.Kind, reciver R,
-	vp nbt.ValuePos,
-	writeType func(nbt.HighLevelValueType) error,
 	opt DecodeOption,
 ) error {
+	// fast path ([]int8,[]uint8,[]int32,...)
+	ok, err := HighLevelDecodeListToFastPath(orig, val, kind, reciver, opt)
+	if ok {
+		return err
+	}
+	// end fast path
 	elem := val.Type().Elem()
 	n := val.Len()
 	et := ReflectKindToHighLevelValueType(elem.Kind(), func() reflect.Type { return elem.Elem() }, opt.SliceAsArray)
 	typeCheck := false
+	typeErase := false
 	if et == nbt.Invalid {
+		if n == 0 { // 当元素长度为 0 时，类型推断也无从提起
+			return reciver.BeginAndEndComplexEmptyList()
+		}
+		// 否则，就从第一个元素推断实际类型
 		fisrtElem := val.Index(0).Interface()
 		_, _, _, et = UnpackAny(fisrtElem, opt.SliceAsArray)
+		// 如果第一个元素类型也不知道，就万策尽了
 		if et == nbt.Invalid {
-			if n == 0 {
-				return reciver.BeginAndEndComplexEmptyList()
-			}
 			return fmt.Errorf("unaccaptable type %v to nbt list element", elem)
 		}
-		// 当不支持类型擦除时，必须检查每个元素的类型是否相同
-		typeCheck = !reciver.HasFlag(nbt.FLAG_SUPPORT_TYPE_ERASE)
+		if reciver.HasFlag(nbt.FLAG_SUPPORT_TYPE_ERASE) {
+			typeErase = true
+			// 如果支持类型擦除，就无需检查每个的类型
+		} else {
+			typeCheck = true
+		}
 	}
-	if err := reciver.BeginComplexList(et, n); err != nil {
+	if err := reciver.BeginComplexList(et, n, typeErase); err != nil {
 		return err
 	}
 	for i := range n {
@@ -130,9 +147,7 @@ func HighLevelDecodeListTo[R nbt.EncoderHighLevel](
 }
 
 func HighLevelDecodeArrayTo[R nbt.EncoderHighLevel](
-	val reflect.Value, kind reflect.Kind, reciver R,
-	vp nbt.ValuePos,
-	writeType func(nbt.HighLevelValueType) error,
+	orig any, val reflect.Value, kind reflect.Kind, reciver R,
 	opt DecodeOption,
 ) error {
 	n := val.Len()
@@ -156,15 +171,13 @@ func HighLevelDecodeArrayTo[R nbt.EncoderHighLevel](
 
 func HighLevelDecodeCompoundTo[R nbt.EncoderHighLevel](
 	val reflect.Value, kind reflect.Kind, reciver R,
-	vp nbt.ValuePos,
-	writeType func(nbt.HighLevelValueType) error,
 	opt DecodeOption,
 ) error {
 	if kind == reflect.Map {
 		if opt.SortMapKey {
-			return HighLevelDecodeMapSort(val, kind, reciver, vp, writeType, opt)
+			return HighLevelDecodeMapSort(val, kind, reciver, opt)
 		} else {
-			return HighLevelDecodeMapUnsort(val, kind, reciver, vp, writeType, opt)
+			return HighLevelDecodeMapUnsort(val, kind, reciver, opt)
 		}
 	}
 	return HighLevelDecodeStruct(val, reciver, true, true, opt)
@@ -172,8 +185,6 @@ func HighLevelDecodeCompoundTo[R nbt.EncoderHighLevel](
 
 func HighLevelDecodeMapUnsort[R nbt.EncoderHighLevel](
 	val reflect.Value, kind reflect.Kind, reciver R,
-	vp nbt.ValuePos,
-	writeType func(nbt.HighLevelValueType) error,
 	opt DecodeOption,
 ) error {
 	if err := reciver.BeginComplexCompound(); err != nil {
@@ -215,8 +226,6 @@ func HighLevelDecodeMapUnsort[R nbt.EncoderHighLevel](
 
 func HighLevelDecodeMapSort[R nbt.EncoderHighLevel](
 	val reflect.Value, kind reflect.Kind, reciver R,
-	vp nbt.ValuePos,
-	writeType func(nbt.HighLevelValueType) error,
 	opt DecodeOption,
 ) error {
 	if err := reciver.BeginComplexCompound(); err != nil {
@@ -273,7 +282,10 @@ func HighLevelDecodeMapSort[R nbt.EncoderHighLevel](
 	return nil
 }
 
-func HighLevelDecodeStruct[R nbt.EncoderHighLevel](val reflect.Value, reciver R, first bool, root bool, opt DecodeOption) error {
+func HighLevelDecodeStruct[R nbt.EncoderHighLevel](
+	val reflect.Value,
+	reciver R, first bool, root bool, opt DecodeOption,
+) error {
 	if root {
 		if err := reciver.BeginComplexCompound(); err != nil {
 			return err
@@ -286,29 +298,41 @@ func HighLevelDecodeStruct[R nbt.EncoderHighLevel](val reflect.Value, reciver R,
 			continue
 		}
 		fieldValue := val.Field(i)
-		tag := fieldType.Tag.Get("nbt")
-		if tag == "-" {
-			continue
-		}
+
+		// 1. 匿名字段优先处理（语义不变）
 		if fieldType.Anonymous {
-			// The field was anonymous, so we write that in the same compound tag as this one.
 			if err := HighLevelDecodeStruct(fieldValue, reciver, first, false, opt); err != nil {
 				return err
 			}
 			continue
 		}
-		tagName := fieldType.Name
-		if before, ok := strings.CutSuffix(tag, ",omitempty"); ok {
-			tag = before
-			if reflect.DeepEqual(fieldValue.Interface(), reflect.Zero(fieldValue.Type()).Interface()) {
-				// The tag had the ',omitempty' tag, meaning it should be omitted if it has the zero
-				// value. If this is reached, that was the case, and we skip it.
+		rawTag := fieldType.Tag.Get(opt.TagName)
+		if rawTag == "-" {
+			continue
+		}
+		// 2. 解析主名和选项
+		name := rawTag
+		opts := ""
+
+		if i := strings.IndexByte(rawTag, ','); i >= 0 {
+			name = rawTag[:i]
+			opts = rawTag[i+1:]
+		}
+
+		// 3. omitempty 处理
+		if strings.Contains(opts, "omitempty") {
+			if reflect.DeepEqual(
+				fieldValue.Interface(),
+				reflect.Zero(fieldValue.Type()).Interface(),
+			) {
 				continue
 			}
 		}
 
-		if tag != "" {
-			tagName = tag
+		// 4. 确定最终 tag 名
+		tagName := name
+		if tagName == "" {
+			tagName = fieldType.Name
 		}
 		if first {
 			first = false

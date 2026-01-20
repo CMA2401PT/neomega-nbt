@@ -164,11 +164,11 @@ type MyAny any
 type MySliceAny []MyAny
 type MyMapAny map[string]MyAny
 type MyStructSub struct {
-	SA MyString `nbt:"sa"`
+	SA MyString `nbt:"sa,omitempty"`
 }
 
 type MyStruct struct {
-	SB MyTypeInt32 `nbt:"sb"`
+	SB MyTypeInt32 `nbt:"sb,omitempty"`
 	MyStructSub
 }
 

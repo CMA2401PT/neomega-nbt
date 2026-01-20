@@ -179,7 +179,7 @@ func (fa *EncoderShim[HL]) WriteLen(len uint32) error {
 		}
 		fa.Aux = len
 		elementStateType := fa.UnBoxListElementType()
-		if err := fa.HighLevelEncoder.BeginComplexList(UnmapToBasicValueType(elementStateType), int(len)); err != nil {
+		if err := fa.HighLevelEncoder.BeginComplexList(UnmapToBasicValueType(elementStateType), int(len), false); err != nil {
 			return err
 		}
 		if len == 0 {

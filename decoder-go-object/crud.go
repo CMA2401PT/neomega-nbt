@@ -60,7 +60,7 @@ func WriteTrivialReflectValue[E nbt.WriteTrivialWithPos](kind reflect.Kind, val 
 	case reflect.Int8:
 		return reciver.WriteInt8(int8(val.Int()), vp)
 	case reflect.Uint8:
-		return reciver.WriteUint8(uint8(val.Uint()), vp)
+		return reciver.WriteInt8(int8(val.Uint()), vp)
 	case reflect.Bool:
 		if val.Bool() {
 			return reciver.WriteInt8(int8(1), vp)
@@ -69,15 +69,15 @@ func WriteTrivialReflectValue[E nbt.WriteTrivialWithPos](kind reflect.Kind, val 
 	case reflect.Int16:
 		return reciver.WriteInt16(int16(val.Int()), vp)
 	case reflect.Uint16:
-		return reciver.WriteUint16(uint16(val.Uint()), vp)
+		return reciver.WriteInt16(int16(val.Uint()), vp)
 	case reflect.Int32:
 		return reciver.WriteInt32(int32(val.Int()), vp)
 	case reflect.Uint32:
-		return reciver.WriteUint32(uint32(val.Uint()), vp)
+		return reciver.WriteInt32(int32(val.Uint()), vp)
 	case reflect.Int64:
 		return reciver.WriteInt64(int64(val.Int()), vp)
 	case reflect.Uint64:
-		return reciver.WriteUint64(uint64(val.Uint()), vp)
+		return reciver.WriteInt64(int64(val.Uint()), vp)
 	case reflect.Float32:
 		return reciver.WriteFloat32(float32(val.Float()), vp)
 	case reflect.Float64:
@@ -101,7 +101,7 @@ func GetArrayElementWritor[E nbt.WriteTrivialWithPos](val reflect.Value, reciver
 	case reflect.Uint8:
 		et = nbt.TrivialByte
 		writeElem = func(i int) error {
-			return reciver.WriteUint8(uint8(val.Index(i).Uint()), nbt.ValuePosArray)
+			return reciver.WriteInt8(int8(val.Index(i).Uint()), nbt.ValuePosArray)
 		}
 	case reflect.Int32:
 		et = nbt.TrivialInt
@@ -111,7 +111,7 @@ func GetArrayElementWritor[E nbt.WriteTrivialWithPos](val reflect.Value, reciver
 	case reflect.Uint32:
 		et = nbt.TrivialInt
 		writeElem = func(i int) error {
-			return reciver.WriteUint32(uint32(val.Index(i).Uint()), nbt.ValuePosArray)
+			return reciver.WriteInt32(int32(val.Index(i).Uint()), nbt.ValuePosArray)
 		}
 	case reflect.Int64:
 		et = nbt.TrivialLong
@@ -121,7 +121,7 @@ func GetArrayElementWritor[E nbt.WriteTrivialWithPos](val reflect.Value, reciver
 	case reflect.Uint64:
 		et = nbt.TrivialLong
 		writeElem = func(i int) error {
-			return reciver.WriteUint64(uint64(val.Index(i).Uint()), nbt.ValuePosArray)
+			return reciver.WriteInt64(int64(val.Index(i).Uint()), nbt.ValuePosArray)
 		}
 	}
 	return
