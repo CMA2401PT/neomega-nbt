@@ -36,17 +36,19 @@ func (e *GoObjEncoder) WriteInt64(v int64, vp nbt.ValuePos) error {
 }
 
 func (e *GoObjEncoder) WriteFloat32(v float32, vp nbt.ValuePos) error {
+	cast := int64(v)
 	if e.Current.TrivialValReciver == nil {
 		return fmt.Errorf("%T cannot accept float (float32) value", e.Current.PtrToData)
 	}
-	return e.Current.TrivialValReciver(v, 0)
+	return e.Current.TrivialValReciver(v, cast)
 }
 
 func (e *GoObjEncoder) WriteFloat64(v float64, vp nbt.ValuePos) error {
+	cast := int64(v)
 	if e.Current.TrivialValReciver == nil {
 		return fmt.Errorf("%T cannot accept float (float64) value", e.Current.PtrToData)
 	}
-	return e.Current.TrivialValReciver(v, 0)
+	return e.Current.TrivialValReciver(v, cast)
 }
 
 func (e *GoObjEncoder) WriteString(v string, vp nbt.ValuePos) error {

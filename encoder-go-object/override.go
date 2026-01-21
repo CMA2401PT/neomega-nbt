@@ -9,7 +9,9 @@ type EncoderOverride interface {
 // 接收一个平凡的数据 v，包括整数，浮点和字符串
 // array，list，compound 不属于此类
 // 如果 v 是一个朴素的整数，
-// 那么其会被转到 int64 并设置 i64，否则 i64 是0
+// 那么其会被转到 int64 并设置 i64
+// 如果是 float32 或 float64，同样会被转到 int64
+// 否则 i64 是0
 type TrivialValReciver func(
 	v any,
 	i64 int64,
