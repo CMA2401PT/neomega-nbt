@@ -65,6 +65,9 @@ func ExpandReciver(ptrToData any, valueType nbt.HighLevelValueType, opt EncodeOp
 
 	val := reflect.ValueOf(ptrToData)
 	elem := val.Elem()
+	if elem.Kind() == reflect.Pointer {
+		return ExpandReciver(elem.Interface(), valueType, opt)
+	}
 	if elem.Kind() == reflect.Interface {
 		// ptrToData=&any
 		return ExpandAny(ptrToData, valueType, elem, opt)

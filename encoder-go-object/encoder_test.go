@@ -6,7 +6,6 @@ import (
 	"sort"
 	"strings"
 	"testing"
-	"time"
 )
 
 func Encode(v any, operates func(*GoObjEncoder)) {
@@ -15,9 +14,7 @@ func Encode(v any, operates func(*GoObjEncoder)) {
 			PtrToData: v,
 		},
 	}
-	st := time.Now()
 	operates(enc)
-	fmt.Printf("cost %v\n", time.Since(st))
 }
 
 func EncodeWithOpt(v any, operates func(*GoObjEncoder), opt EncodeOption) {
@@ -27,9 +24,7 @@ func EncodeWithOpt(v any, operates func(*GoObjEncoder), opt EncodeOption) {
 		},
 		EncodeOption: opt,
 	}
-	st := time.Now()
 	operates(enc)
-	fmt.Printf("cost %v\n", time.Since(st))
 }
 
 type MyInt8Override int8
@@ -243,7 +238,8 @@ func TestEncode(t *testing.T) {
 
 	// 指针
 	var ap int8
-	Encode(&ap, func(e *GoObjEncoder) {
+	app := &ap
+	Encode(&app, func(e *GoObjEncoder) {
 		e.WriteRootTag("", nbt.TrivialByte)
 		e.WriteInt8(2, 0)
 	})
