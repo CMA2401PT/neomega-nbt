@@ -9,6 +9,10 @@ type DecoderShim[LL nbt.Encoder] struct {
 	LowLevelEncoder LL
 }
 
+func NewDecoderShim[LL nbt.Encoder](lowlevelEncoder LL) DecoderShim[LL] {
+	return DecoderShim[LL]{LowLevelEncoder: lowlevelEncoder}
+}
+
 func (s DecoderShim[LL]) WriteRootTag(tag string, valueType nbt.HighLevelValueType) (err error) {
 	err = s.LowLevelEncoder.WriteType(valueType.LowLevelType())
 	if err != nil {

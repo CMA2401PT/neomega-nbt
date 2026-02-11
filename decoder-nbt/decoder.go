@@ -5,19 +5,20 @@ import (
 	"fmt"
 	"io"
 	nbt "neomega-nbt"
+	seq_io "neomega-nbt/seq-io"
 )
 
-func DecodeFromIOReader[E Encoding[offsetReader]](r io.Reader, e nbt.Encoder) (err error) {
-	reader := newOffsetReader(r)
-	return Decode[offsetReader, E](reader, e)
+func DecodeFromIOReader[E Encoding[seq_io.OffsetReader]](r io.Reader, e nbt.Encoder) (err error) {
+	reader := seq_io.NewOffsetReader(r)
+	return Decode[seq_io.OffsetReader, E](reader, e)
 }
 
-func DecodeFromBytes[Seq ~string | ~[]uint8, E Encoding[*ByteReader[Seq]]](data Seq, e nbt.Encoder) (err error) {
-	reader := NewByteReaderFromBytes(data)
-	return Decode[*ByteReader[Seq], E](reader, e)
+func DecodeFromBytes[Seq ~string | ~[]uint8, E Encoding[*seq_io.ByteReader[Seq]]](data Seq, e nbt.Encoder) (err error) {
+	reader := seq_io.NewByteReaderFromBytes(data)
+	return Decode[*seq_io.ByteReader[Seq], E](reader, e)
 }
 
-func Decode[R Reader, E Encoding[R]](r R, e nbt.Encoder) (err error) {
+func Decode[R seq_io.Reader, E Encoding[R]](r R, e nbt.Encoder) (err error) {
 	var tagTypeByte uint8
 	var tagName string
 	var enc E
@@ -46,7 +47,7 @@ func Decode[R Reader, E Encoding[R]](r R, e nbt.Encoder) (err error) {
 	return decodeValue[R, E](r, e, t)
 }
 
-func decodeValue[R Reader, E Encoding[R]](r R, e nbt.Encoder, t nbt.TagType) (err error) {
+func decodeValue[R seq_io.Reader, E Encoding[R]](r R, e nbt.Encoder, t nbt.TagType) (err error) {
 	var enc E
 	switch t {
 	default:

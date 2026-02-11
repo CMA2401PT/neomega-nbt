@@ -4,10 +4,11 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math"
+	seq_io "neomega-nbt/seq-io"
 	"unsafe"
 )
 
-type Encoding[R Reader] interface {
+type Encoding[R seq_io.Reader] interface {
 	Int16(r R) (int16, error)
 	Int32(r R) (int32, error)
 	Int64(r R) (int64, error)
@@ -39,7 +40,7 @@ func (err InvalidVarintError) Error() string {
 	return fmt.Sprintf("nbt: varint did not terminate after %v bytes at offset %v", err.N, err.Off)
 }
 
-type littleEndian[R Reader] struct{}
+type littleEndian[R seq_io.Reader] struct{}
 
 // Int16 ...
 func (littleEndian[R]) Int16(r R) (int16, error) {
@@ -124,7 +125,7 @@ func (e littleEndian[R]) String(r R) (string, error) {
 	return *(*string)(unsafe.Pointer(&b)), nil
 }
 
-type bigEndian[R Reader] struct{}
+type bigEndian[R seq_io.Reader] struct{}
 
 // Int16 ...
 func (bigEndian[R]) Int16(r R) (int16, error) {
@@ -184,7 +185,7 @@ func (e bigEndian[R]) String(r R) (string, error) {
 	return *(*string)(unsafe.Pointer(&b)), nil
 }
 
-type networklittleEndian[R Reader] struct{ littleEndian[R] }
+type networklittleEndian[R seq_io.Reader] struct{ littleEndian[R] }
 
 // Int32 ...
 func (networklittleEndian[R]) Int32(r R) (int32, error) {
@@ -232,10 +233,6 @@ func (e networklittleEndian[R]) String(r R) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	// Netease
-	// if length > maxStringSize {
-	// 	return "", InvalidStringError{N: uint(length), Off: r.off, Err: errStringTooLong}
-	// }
 	data := make([]byte, length)
 	if err := r.Read(data); err != nil {
 		return "", BufferOverrunError{Op: "String"}

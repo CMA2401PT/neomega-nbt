@@ -1,8 +1,11 @@
 package encoder_snbt
 
-import "unsafe"
+import (
+	seq_io "neomega-nbt/seq-io"
+	"unsafe"
+)
 
-func writeSNBTString[W Writer](w W, data string) error {
+func writeSNBTString[W seq_io.Writer](w W, data string) error {
 	if err := w.WriteByte('"'); err != nil {
 		return err
 	}
@@ -23,15 +26,15 @@ func writeSNBTString[W Writer](w W, data string) error {
 	return nil
 }
 
-func writeString[W Writer](w W, data string) error {
+func writeString[W seq_io.Writer](w W, data string) error {
 	bs := unsafe.Slice(unsafe.StringData(data), len(data))
-	if _, err := w.Write(bs); err != nil {
+	if err := w.Write(bs); err != nil {
 		return err
 	}
 	return nil
 }
 
-func writeInt[W Writer, T interface {
+func writeInt[W seq_io.Writer, T interface {
 	int8 | uint8 | int16 | uint16 | int32 | uint32 | int64 | uint64
 }](w W, i T) error {
 	buf := [32]byte{}

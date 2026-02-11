@@ -1,4 +1,4 @@
-package encoder_nbt
+package seq_io
 
 import "io"
 
@@ -8,20 +8,35 @@ type Writer interface {
 	WriteByte(byte) error
 }
 
-// offsetWriter is a wrapper around an io.Writer which keeps track of the amount of bytes written, so that it
+// OffsetWriter is a wrapper around an io.Writer which keeps track of the amount of bytes written, so that it
 // may be used in errors.
-type offsetWriter struct {
-	io.Writer
+type OffsetWriter struct {
+	w         io.Writer
 	writeByte func(byte) error
 }
 
+func NewOffsetWriter(w io.Writer) OffsetWriter {
+	var writer OffsetWriter
+	if byteWriter, ok := w.(io.ByteWriter); ok {
+		writer = OffsetWriter{w: w, writeByte: byteWriter.WriteByte}
+	} else {
+		writer = OffsetWriter{w: w, writeByte: func(b byte) error {
+			var buf [1]byte
+			buf[0] = b
+			_, err := w.Write(buf[:])
+			return err
+		}}
+	}
+	return writer
+}
+
 // Write writes a byte slice to the underlying io.Writer. It increases the byte offset by exactly n.
-func (w offsetWriter) Write(b []byte) (err error) {
-	_, err = w.Writer.Write(b)
+func (w OffsetWriter) Write(b []byte) (err error) {
+	_, err = w.w.Write(b)
 	return
 }
 
-func (w offsetWriter) WriteByte(b byte) (err error) {
+func (w OffsetWriter) WriteByte(b byte) (err error) {
 	return w.writeByte(b)
 }
 

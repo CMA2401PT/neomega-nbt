@@ -1,4 +1,4 @@
-package decoder_nbt
+package seq_io
 
 import (
 	"errors"
@@ -11,19 +11,18 @@ type Reader interface {
 	ReadByte() (byte, error)
 }
 
-// offsetReader is a wrapper around an io.Reader, used to track the offset (amount of bytes read) of the data
+// OffsetReader is a wrapper around an io.Reader, used to track the offset (amount of bytes read) of the data
 // that is being read, so that errors may have offset data.
-type offsetReader struct {
+type OffsetReader struct {
 	io.Reader
-
 	// ReadByte is a function provided by offsetReader if the io.Reader does not implement io.ByteReader.
 	readByte func() (byte, error)
 }
 
 // newOffsetReader returns a new offset reader for the io.Reader passed, setting the ReadByte and Next
 // functions as appropriate for that particular reader.
-func newOffsetReader(r io.Reader) offsetReader {
-	reader := offsetReader{Reader: r}
+func NewOffsetReader(r io.Reader) OffsetReader {
+	reader := OffsetReader{Reader: r}
 	if byteReader, ok := r.(io.ByteReader); ok {
 		reader.readByte = func() (byte, error) {
 			return byteReader.ReadByte()
@@ -39,12 +38,12 @@ func newOffsetReader(r io.Reader) offsetReader {
 }
 
 // Read reads from the io.Reader and increases the reader's offset by exactly n.
-func (b offsetReader) Read(p []byte) (err error) {
+func (b OffsetReader) Read(p []byte) (err error) {
 	_, err = io.ReadAtLeast(b.Reader, p, len(p))
 	return
 }
 
-func (b offsetReader) ReadByte() (byte, error) {
+func (b OffsetReader) ReadByte() (byte, error) {
 	return b.readByte()
 }
 

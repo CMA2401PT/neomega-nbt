@@ -4,16 +4,26 @@ import (
 	"fmt"
 	"io"
 	nbt "neomega-nbt"
+	seq_io "neomega-nbt/seq-io"
 )
 
-type Writer interface {
-	io.Writer
-	WriteByte(b byte) (err error)
+type SnbtEncoderHighLevel[W seq_io.Writer] struct{ w seq_io.Writer }
+
+func NewEncoderFromIOWriter(w io.Writer) SnbtEncoderHighLevel[seq_io.OffsetWriter] {
+	return SnbtEncoderHighLevel[seq_io.OffsetWriter]{w: seq_io.NewOffsetWriter(w)}
 }
 
-type SnbtEncoderHighLevel[W Writer] struct{ w Writer }
+func NewEncoderToBytes(initBuf []uint8) (
+	enc SnbtEncoderHighLevel[*seq_io.SliceGrowWriter],
+	getResult func() []uint8,
+) {
+	writer := seq_io.NewSliceGrowWriter(initBuf)
+	return SnbtEncoderHighLevel[*seq_io.SliceGrowWriter]{w: writer}, func() []uint8 {
+		return writer.Bytes()
+	}
+}
 
-func NewSnbtEncoderHighLevel[W Writer](w W) SnbtEncoderHighLevel[W] {
+func NewEncoder[W seq_io.Writer](w W) SnbtEncoderHighLevel[W] {
 	return SnbtEncoderHighLevel[W]{w: w}
 }
 

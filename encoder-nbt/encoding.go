@@ -4,10 +4,11 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math"
+	seq_io "neomega-nbt/seq-io"
 	"unsafe"
 )
 
-type Encoding[W Writer] interface {
+type Encoding[W seq_io.Writer] interface {
 	WriteInt16(w W, x int16) error
 	WriteInt32(w W, x int32) error
 	WriteInt64(w W, x int64) error
@@ -15,7 +16,7 @@ type Encoding[W Writer] interface {
 	WriteFloat64(w W, x float64) error
 	WriteString(w W, x string) error
 }
-type LittleEndian[W Writer] struct{}
+type LittleEndian[W seq_io.Writer] struct{}
 
 // FailedWriteError is returned if a Write operation failed on an W, meaning some of the data could
 // not be written to the io.Writer.
@@ -87,7 +88,7 @@ func (e LittleEndian[W]) WriteString(w W, x string) error {
 	return nil
 }
 
-type BigEndian[W Writer] struct{}
+type BigEndian[W seq_io.Writer] struct{}
 
 // WriteInt16 ...
 func (BigEndian[W]) WriteInt16(w W, x int16) error {
@@ -152,7 +153,7 @@ func (e BigEndian[W]) WriteString(w W, x string) error {
 	return nil
 }
 
-type NetworkLittleEndian[W Writer] struct{ LittleEndian[W] }
+type NetworkLittleEndian[W seq_io.Writer] struct{ LittleEndian[W] }
 
 // WriteInt32 ...
 func (NetworkLittleEndian[W]) WriteInt32(w W, x int32) error {

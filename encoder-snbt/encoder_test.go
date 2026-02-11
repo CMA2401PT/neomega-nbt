@@ -1,36 +1,30 @@
 package encoder_snbt
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
 	neomega_nbt "neomega-nbt"
 	shim "neomega-nbt/encoder-shim"
+	seq_io "neomega-nbt/seq-io"
 	"testing"
 )
 
 type SimpleSnbtEncoderHighLevel struct {
-	shim.EncoderShim[SnbtEncoderHighLevel[*bufio.Writer]]
-	buf    *bytes.Buffer
-	writer *bufio.Writer
+	shim.EncoderShim[SnbtEncoderHighLevel[*seq_io.SliceGrowWriter]]
+	getter func() []uint8
 }
 
 func (e *SimpleSnbtEncoderHighLevel) Finish() error {
-	e.writer.Flush()
-	fmt.Println("out:", string(e.buf.String()))
+	fmt.Println("out:", string(e.getter()))
 	return nil
 }
 
 func NewSimpleSnbtEncoderHighLevel() *SimpleSnbtEncoderHighLevel {
-	buf := bytes.NewBuffer(nil)
-	writer := bufio.NewWriter(buf)
-	enc := shim.EncoderShim[SnbtEncoderHighLevel[*bufio.Writer]]{
-		HighLevelEncoder: NewSnbtEncoderHighLevel(writer),
-	}
+	enc, getter := NewEncoderToBytes(nil)
 	return &SimpleSnbtEncoderHighLevel{
-		EncoderShim: enc,
-		buf:         buf,
-		writer:      writer,
+		EncoderShim: shim.EncoderShim[SnbtEncoderHighLevel[*seq_io.SliceGrowWriter]]{
+			HighLevelEncoder: enc,
+		},
+		getter: getter,
 	}
 }
 

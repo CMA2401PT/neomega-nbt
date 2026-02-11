@@ -1,27 +1,23 @@
 package encoder_snbt
 
 import (
-	"bufio"
-	"bytes"
 	nbt "neomega-nbt"
 	decoder_go_object "neomega-nbt/decoder-go-object"
 	"testing"
 )
 
 func EncodeSNBT(v any, sliceAsArray bool) (string, error) {
-	buf := bytes.NewBuffer(nil)
-	writer := bufio.NewWriter(buf)
+	enc, getter := NewEncoderToBytes(nil)
 	if err := decoder_go_object.HighLevelDecodeTo(
 		v,
-		NewSnbtEncoderHighLevel(writer),
+		enc,
 		decoder_go_object.DecodeOption{
 			SliceAsArray: sliceAsArray,
 			SortMapKey:   true,
 		}); err != nil {
 		return "", err
 	}
-	writer.Flush()
-	return string(buf.String()), nil
+	return string(getter()), nil
 }
 
 func TestSnbtEncode(t *testing.T) {
