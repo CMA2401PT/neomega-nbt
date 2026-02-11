@@ -83,9 +83,6 @@ func (e SnbtEncoderHighLevel[W]) NextListElement(valueType nbt.HighLevelValueTyp
 func (e SnbtEncoderHighLevel[W]) EndComplexList() error {
 	return writeString(e.w, "]")
 }
-func (e SnbtEncoderHighLevel[W]) Finish() error {
-	return nil
-}
 
 func (e SnbtEncoderHighLevel[W]) HasFlag(flag nbt.Flag) bool {
 	switch flag {

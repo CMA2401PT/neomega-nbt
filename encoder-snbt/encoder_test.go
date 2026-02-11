@@ -16,10 +16,9 @@ type SimpleSnbtEncoderHighLevel struct {
 }
 
 func (e *SimpleSnbtEncoderHighLevel) Finish() error {
-	err := e.EncoderShim.Finish()
 	e.writer.Flush()
 	fmt.Println("out:", string(e.buf.String()))
-	return err
+	return nil
 }
 
 func NewSimpleSnbtEncoderHighLevel() *SimpleSnbtEncoderHighLevel {
@@ -35,7 +34,12 @@ func NewSimpleSnbtEncoderHighLevel() *SimpleSnbtEncoderHighLevel {
 	}
 }
 
-func _TestEncoderRestriction(t *testing.T, makeEncoder func() neomega_nbt.Encoder) {
+type EncoderWithFinishCheck interface {
+	neomega_nbt.Encoder
+	Finish() error
+}
+
+func _TestEncoderRestriction(t *testing.T, makeEncoder func() EncoderWithFinishCheck) {
 	ok := func(err error) {
 		t.Helper()
 		if err != nil {
@@ -253,5 +257,5 @@ func _TestEncoderRestriction(t *testing.T, makeEncoder func() neomega_nbt.Encode
 }
 
 func TestEncoderShim(t *testing.T) {
-	_TestEncoderRestriction(t, func() neomega_nbt.Encoder { return NewSimpleSnbtEncoderHighLevel() })
+	_TestEncoderRestriction(t, func() EncoderWithFinishCheck { return NewSimpleSnbtEncoderHighLevel() })
 }
