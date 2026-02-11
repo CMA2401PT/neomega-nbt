@@ -7,12 +7,17 @@ import (
 	nbt "neomega-nbt"
 )
 
-func Decode[E Encoding[offsetReader]](r io.Reader, e nbt.Encoder) (err error) {
+func DecodeFromIOReader[E Encoding[offsetReader]](r io.Reader, e nbt.Encoder) (err error) {
 	reader := newOffsetReader(r)
-	return decode[offsetReader, E](reader, e)
+	return Decode[offsetReader, E](reader, e)
 }
 
-func decode[R Reader, E Encoding[R]](r R, e nbt.Encoder) (err error) {
+func DecodeFromBytes[Seq ~string | ~[]uint8, E Encoding[*ByteReader[Seq]]](data Seq, e nbt.Encoder) (err error) {
+	reader := NewByteReaderFromBytes(data)
+	return Decode[*ByteReader[Seq], E](reader, e)
+}
+
+func Decode[R Reader, E Encoding[R]](r R, e nbt.Encoder) (err error) {
 	var tagTypeByte uint8
 	var tagName string
 	var enc E

@@ -43,47 +43,72 @@ type littleEndian[R Reader] struct{}
 
 // Int16 ...
 func (littleEndian[R]) Int16(r R) (int16, error) {
-	b := make([]byte, 2)
-	if err := r.Read(b); err != nil {
+	var b [2]byte
+	if err := r.Read(b[:]); err != nil {
 		return 0, BufferOverrunError{Op: "Int16"}
 	}
-	return *(*int16)(unsafe.Pointer(&b[0])), nil
+	u := uint16(b[0]) | uint16(b[1])<<8
+	return int16(u), nil
 }
 
 // Int32 ...
 func (littleEndian[R]) Int32(r R) (int32, error) {
-	b := make([]byte, 4)
-	if err := r.Read(b); err != nil {
+	var b [4]byte
+	if err := r.Read(b[:]); err != nil {
 		return 0, BufferOverrunError{Op: "Int32"}
 	}
-	return *(*int32)(unsafe.Pointer(&b[0])), nil
+	u := uint32(b[0]) |
+		uint32(b[1])<<8 |
+		uint32(b[2])<<16 |
+		uint32(b[3])<<24
+	return int32(u), nil
 }
 
 // Int64 ...
 func (littleEndian[R]) Int64(r R) (int64, error) {
-	b := make([]byte, 8)
-	if err := r.Read(b); err != nil {
-		return 0, BufferOverrunError{Op: "Float64"}
+	var b [8]byte
+	if err := r.Read(b[:]); err != nil {
+		return 0, BufferOverrunError{Op: "Int64"}
 	}
-	return *(*int64)(unsafe.Pointer(&b[0])), nil
+	u := uint64(b[0]) |
+		uint64(b[1])<<8 |
+		uint64(b[2])<<16 |
+		uint64(b[3])<<24 |
+		uint64(b[4])<<32 |
+		uint64(b[5])<<40 |
+		uint64(b[6])<<48 |
+		uint64(b[7])<<56
+	return int64(u), nil
 }
 
 // Float32 ...
 func (littleEndian[R]) Float32(r R) (float32, error) {
-	b := make([]byte, 4)
-	if err := r.Read(b); err != nil {
+	var b [4]byte
+	if err := r.Read(b[:]); err != nil {
 		return 0, BufferOverrunError{Op: "Float32"}
 	}
-	return *(*float32)(unsafe.Pointer(&b[0])), nil
+	u := uint32(b[0]) |
+		uint32(b[1])<<8 |
+		uint32(b[2])<<16 |
+		uint32(b[3])<<24
+	return math.Float32frombits(u), nil
 }
 
 // Float64 ...
 func (littleEndian[R]) Float64(r R) (float64, error) {
-	b := make([]byte, 8)
-	if err := r.Read(b); err != nil {
+	var b [8]byte
+	if err := r.Read(b[:]); err != nil {
 		return 0, BufferOverrunError{Op: "Float64"}
 	}
-	return *(*float64)(unsafe.Pointer(&b[0])), nil
+	u := uint64(b[0]) |
+		uint64(b[1])<<8 |
+		uint64(b[2])<<16 |
+		uint64(b[3])<<24 |
+		uint64(b[4])<<32 |
+		uint64(b[5])<<40 |
+		uint64(b[6])<<48 |
+		uint64(b[7])<<56
+	return math.Float64frombits(u), nil
 }
 
 // String ...

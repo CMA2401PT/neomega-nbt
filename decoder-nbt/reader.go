@@ -1,6 +1,7 @@
 package decoder_nbt
 
 import (
+	"errors"
 	"io"
 )
 
@@ -45,4 +46,42 @@ func (b offsetReader) Read(p []byte) (err error) {
 
 func (b offsetReader) ReadByte() (byte, error) {
 	return b.readByte()
+}
+
+var ErrUnexpectedEOF = errors.New("unexpected EOF")
+
+type ByteReader[Seq ~string | ~[]uint8] struct {
+	b Seq
+	i int
+}
+
+func NewByteReaderFromBytes[Seq ~string | ~[]uint8](data Seq) *ByteReader[Seq] {
+	return &ByteReader[Seq]{b: data}
+}
+
+func (r *ByteReader[Seq]) Remaining() int {
+	return len(r.b) - r.i
+}
+
+func (r *ByteReader[Seq]) Read(p []byte) error {
+	n := len(p)
+	if n == 0 {
+		return nil
+	}
+	if r.i+n > len(r.b) {
+		// 必须读满，否则报错
+		return ErrUnexpectedEOF
+	}
+	copy(p, r.b[r.i:r.i+n])
+	r.i += n
+	return nil
+}
+
+func (r *ByteReader[Seq]) ReadByte() (byte, error) {
+	if r.i >= len(r.b) {
+		return 0, ErrUnexpectedEOF
+	}
+	v := r.b[r.i]
+	r.i++
+	return v, nil
 }
