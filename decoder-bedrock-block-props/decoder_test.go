@@ -1,23 +1,18 @@
 package decoder_bedrock_block_props
 
 import (
-	"bufio"
-	"bytes"
 	encoder_snbt "neomega-nbt/encoder-snbt"
 	"testing"
 )
 
 func TestBedrockPropsDecode(t *testing.T) {
 	assertSnbt := func(propStr string, snbtStr string) {
-		buf := bytes.NewBuffer(nil)
-		writer := bufio.NewWriter(buf)
-		enc := encoder_snbt.NewSnbtEncoderHighLevel(writer)
+		enc, getter := encoder_snbt.NewEncoderToBytes(nil)
 		err := Decode(propStr, enc)
 		if err != nil {
 			t.Fatalf("on decoding %v, get error: %v", propStr, err)
 		}
-		writer.Flush()
-		outStr := buf.String()
+		outStr := string(getter())
 		if outStr != snbtStr {
 			t.Fatalf("on decoding: %v, expect: %v, get: %v", propStr, snbtStr, outStr)
 		}
