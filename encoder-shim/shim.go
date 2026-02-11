@@ -26,13 +26,6 @@ func (fa *EncoderShim[HL]) Done() bool {
 	return false
 }
 
-func (fa *EncoderShim[HL]) Finish() error {
-	if !fa.Done() {
-		return fa.UnexpectError()
-	}
-	return fa.HighLevelEncoder.Finish()
-}
-
 func (fa *EncoderShim[HL]) IsRoot() bool {
 	return len(fa.Stack) == 0
 }
@@ -40,7 +33,7 @@ func (fa *EncoderShim[HL]) IsRoot() bool {
 func (fa *EncoderShim[HL]) Pop() error {
 	if len(fa.Stack) == 0 {
 		fa.EncodeState = EncodeStateEnd
-		return fa.HighLevelEncoder.Finish()
+		return nil
 	}
 
 	fa.EncodeStateWithLen = fa.Stack[len(fa.Stack)-1]

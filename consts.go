@@ -66,25 +66,25 @@ func (t TagType) String() string {
 type HighLevelValueType uint8
 
 const (
-	Invalid          HighLevelValueType = iota
-	TrivialByte                         //int8
-	TrivialShort                        //int16
-	TrivialInt                          // int32
-	TrivialLong                         // int64
-	TrivialFloat                        // float32
-	TrivialDouble                       // float64
-	_                                   // array of uint8, tagByteArray
-	TrivialString                       // string
-	_                                   //list
-	_                                   // map[string]any, tagCompound
-	_                                   // array of int32, tagIntArray
-	_                                   // array of int64, tagLongArray
-	Complex          = 16               //表示 Compound，List， Array 这类长度不确定的情况
-	ComplexCompound  = 16 | 10          // 10=tagCompound
-	ComplexList      = 16 | 9           // 9=tagList
-	ComplexByteArray = 16 | 7           // 7=tagByteArray
-	ComplexIntArray  = 16 | 11          // 11=tagIntArray
-	ComplexLongArray = 16 | 12          // 12=tagLongArray
+	Invalid          HighLevelValueType            = iota
+	TrivialByte                                    //int8
+	TrivialShort                                   //int16
+	TrivialInt                                     // int32
+	TrivialLong                                    // int64
+	TrivialFloat                                   // float32
+	TrivialDouble                                  // float64
+	_                                              // array of uint8, tagByteArray
+	TrivialString                                  // string
+	_                                              //list
+	_                                              // map[string]any, tagCompound
+	_                                              // array of int32, tagIntArray
+	_                                              // array of int64, tagLongArray
+	Complex          = HighLevelValueType(16)      //表示 Compound，List， Array 这类长度不确定的情况
+	ComplexCompound  = HighLevelValueType(16 | 10) // 10=tagCompound
+	ComplexList      = HighLevelValueType(16 | 9)  // 9=tagList
+	ComplexByteArray = HighLevelValueType(16 | 7)  // 7=tagByteArray
+	ComplexIntArray  = HighLevelValueType(16 | 11) // 11=tagIntArray
+	ComplexLongArray = HighLevelValueType(16 | 12) // 12=tagLongArray
 )
 
 func (t HighLevelValueType) String() string {
@@ -123,6 +123,37 @@ func (t HighLevelValueType) String() string {
 			return "Complex(Unknown)"
 		}
 		return "HighLevelValueType(Unknown)"
+	}
+}
+
+func (t HighLevelValueType) LowLevelType() TagType {
+	switch t {
+	default:
+		return TagEnd
+	case TrivialByte:
+		return TagByte
+	case TrivialShort:
+		return TagShort
+	case TrivialInt:
+		return TagInt
+	case TrivialLong:
+		return TagLong
+	case TrivialFloat:
+		return TagFloat
+	case TrivialDouble:
+		return TagDouble
+	case TrivialString:
+		return TagString
+	case ComplexCompound:
+		return TagCompound
+	case ComplexList:
+		return TagList
+	case ComplexByteArray:
+		return TagByteArray
+	case ComplexIntArray:
+		return TagIntArray
+	case ComplexLongArray:
+		return TagLongArray
 	}
 }
 

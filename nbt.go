@@ -20,9 +20,6 @@ type Encoder interface {
 	// 标准为 int32，但是考虑到部分情况会超过 int32，且负值实际无意义
 	WriteLen(len uint32) error
 	WriteEnd() error
-	Expect() string // 返回当前期望何种值，用于调试
-	// 当全部完成时 Finish 被调用
-	Finish() error
 	// 写入常规值
 	WriteTrivial
 }
@@ -99,9 +96,6 @@ type EncoderHighLevel interface {
 	NextListElement(valueType HighLevelValueType) error
 	// 最后一个 list 元素后被调用
 	EndComplexList() error
-	// 当全部完成时 Finish 被调用
-	Finish() error
-
 	// 一些情况下，Encoder 可以支持一些特殊情况或者放松对操作的约束
 	// 例如，当变为 go 或 snbt 或一些其它对象时，不一定需要提前知道 list/array 的长度
 	// 或者，允许 list 实际具有不同的类型
