@@ -13,6 +13,7 @@ type Current struct {
 }
 
 type Aux struct {
+	emptyCompound          bool
 	lastListElemType       nbt.HighLevelValueType
 	lastListValueReciver   ValueReciver
 	parentListConstructor  ListConstructor
@@ -38,6 +39,15 @@ type GoObjEncoder struct {
 	EncodeOption
 }
 
+func NewGoObjEncoder(ptrToReciver any, opt EncodeOption) nbt.EncoderHighLevel {
+	return &GoObjEncoder{
+		Current: Current{
+			PtrToData: ptrToReciver,
+		},
+		EncodeOption: opt,
+	}
+}
+
 func (e *GoObjEncoder) WriteRootTag(tag string, valueType nbt.HighLevelValueType) (err error) {
 	if e.TagName == "" {
 		e.TagName = "nbt"
@@ -47,13 +57,6 @@ func (e *GoObjEncoder) WriteRootTag(tag string, valueType nbt.HighLevelValueType
 		return err
 	}
 	e.Current.ValueReciver = reciver
-	return nil
-}
-
-func (e *GoObjEncoder) Finish() error {
-	if len(e.Stack) > 0 {
-		return fmt.Errorf("go obj not successfully constructed")
-	}
 	return nil
 }
 
@@ -91,6 +94,7 @@ func (e *GoObjEncoder) Push(ptrToData any, reciver ValueReciver) {
 }
 
 func (e *GoObjEncoder) BeginComplexCompound() error {
+	e.Current.aux.emptyCompound = true
 	if e.Current.CompoundConstructor == nil {
 		return fmt.Errorf("%T cannot accept compound value", e.Current.PtrToData)
 	}
@@ -106,6 +110,7 @@ func (e *GoObjEncoder) NextCompoundElement() error {
 }
 
 func (e *GoObjEncoder) WriteCompoundTag(tag string, valueType nbt.HighLevelValueType) error {
+	e.Current.aux.emptyCompound = false
 	ptr, err := e.Current.CompoundConstructor.GetTagPointer(tag, valueType)
 	if err != nil {
 		return err
@@ -120,8 +125,12 @@ func (e *GoObjEncoder) WriteCompoundTag(tag string, valueType nbt.HighLevelValue
 
 func (e *GoObjEncoder) EndComplexCompound() error {
 	// 弹出最后一个元素
-	if err := e.Pop(); err != nil {
-		return err
+	if !e.Current.aux.emptyCompound {
+		if err := e.Pop(); err != nil {
+			return err
+		}
+	} else {
+		e.Current.aux.emptyCompound = false
 	}
 	return e.Current.CompoundConstructor.OnCompoundFinish()
 }

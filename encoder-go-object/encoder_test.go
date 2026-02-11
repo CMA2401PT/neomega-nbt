@@ -294,6 +294,15 @@ func TestEncode(t *testing.T) {
 	expect(ci, "map[a:3 b:2 c:1]")
 
 	// any
+	ci = nil
+	Encode(&ci, func(e *GoObjEncoder) {
+		e.WriteRootTag("", nbt.ComplexCompound)
+		e.BeginComplexCompound()
+		e.EndComplexCompound()
+	})
+	expect(ci, "map[]")
+
+	// any
 	Encode(&ci, func(e *GoObjEncoder) {
 		e.WriteRootTag("", nbt.ComplexCompound)
 		e.BeginComplexCompound()
