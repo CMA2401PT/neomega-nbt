@@ -32,7 +32,7 @@ func (err FailedWriteError) Error() string {
 // WriteInt16 ...
 func (LittleEndian[W]) WriteInt16(w W, x int16) error {
 	b := *(*[2]byte)(unsafe.Pointer(&x))
-	if _, err := w.Write(b[:]); err != nil {
+	if err := w.Write(b[:]); err != nil {
 		return FailedWriteError{Op: "WriteInt16"}
 	}
 	return nil
@@ -41,7 +41,7 @@ func (LittleEndian[W]) WriteInt16(w W, x int16) error {
 // WriteInt32 ...
 func (LittleEndian[W]) WriteInt32(w W, x int32) error {
 	b := *(*[4]byte)(unsafe.Pointer(&x))
-	if _, err := w.Write(b[:]); err != nil {
+	if err := w.Write(b[:]); err != nil {
 		return FailedWriteError{Op: "WriteInt32"}
 	}
 	return nil
@@ -50,7 +50,7 @@ func (LittleEndian[W]) WriteInt32(w W, x int32) error {
 // WriteInt64 ...
 func (LittleEndian[W]) WriteInt64(w W, x int64) error {
 	b := *(*[8]byte)(unsafe.Pointer(&x))
-	if _, err := w.Write(b[:]); err != nil {
+	if err := w.Write(b[:]); err != nil {
 		return FailedWriteError{Op: "WriteInt64"}
 	}
 	return nil
@@ -59,7 +59,7 @@ func (LittleEndian[W]) WriteInt64(w W, x int64) error {
 // WriteFloat32 ...
 func (LittleEndian[W]) WriteFloat32(w W, x float32) error {
 	b := *(*[4]byte)(unsafe.Pointer(&x))
-	if _, err := w.Write(b[:]); err != nil {
+	if err := w.Write(b[:]); err != nil {
 		return FailedWriteError{Op: "WriteFloat32"}
 	}
 	return nil
@@ -68,7 +68,7 @@ func (LittleEndian[W]) WriteFloat32(w W, x float32) error {
 // WriteFloat64 ...
 func (LittleEndian[W]) WriteFloat64(w W, x float64) error {
 	b := *(*[8]byte)(unsafe.Pointer(&x))
-	if _, err := w.Write(b[:]); err != nil {
+	if err := w.Write(b[:]); err != nil {
 		return FailedWriteError{Op: "WriteFloat64"}
 	}
 	return nil
@@ -81,7 +81,7 @@ func (e LittleEndian[W]) WriteString(w W, x string) error {
 	}
 	// Use unsafe conversion from a string to a byte slice to prevent copying.
 	b := *(*[]byte)(unsafe.Pointer(&x))
-	if _, err := w.Write(b); err != nil {
+	if err := w.Write(b); err != nil {
 		return FailedWriteError{Op: "WriteString"}
 	}
 	return nil
@@ -93,7 +93,7 @@ type BigEndian[W Writer] struct{}
 func (BigEndian[W]) WriteInt16(w W, x int16) error {
 	b := make([]byte, 2)
 	binary.BigEndian.PutUint16(b, uint16(x))
-	if _, err := w.Write(b); err != nil {
+	if err := w.Write(b); err != nil {
 		return FailedWriteError{Op: "WriteInt16"}
 	}
 	return nil
@@ -103,7 +103,7 @@ func (BigEndian[W]) WriteInt16(w W, x int16) error {
 func (BigEndian[W]) WriteInt32(w W, x int32) error {
 	b := make([]byte, 4)
 	binary.BigEndian.PutUint32(b, uint32(x))
-	if _, err := w.Write(b[:]); err != nil {
+	if err := w.Write(b[:]); err != nil {
 		return FailedWriteError{Op: "WriteInt32"}
 	}
 	return nil
@@ -113,7 +113,7 @@ func (BigEndian[W]) WriteInt32(w W, x int32) error {
 func (BigEndian[W]) WriteInt64(w W, x int64) error {
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, uint64(x))
-	if _, err := w.Write(b[:]); err != nil {
+	if err := w.Write(b[:]); err != nil {
 		return FailedWriteError{Op: "WriteInt64"}
 	}
 	return nil
@@ -123,7 +123,7 @@ func (BigEndian[W]) WriteInt64(w W, x int64) error {
 func (BigEndian[W]) WriteFloat32(w W, x float32) error {
 	b := make([]byte, 4)
 	binary.BigEndian.PutUint32(b, math.Float32bits(x))
-	if _, err := w.Write(b[:]); err != nil {
+	if err := w.Write(b[:]); err != nil {
 		return FailedWriteError{Op: "WriteFloat32"}
 	}
 	return nil
@@ -133,7 +133,7 @@ func (BigEndian[W]) WriteFloat32(w W, x float32) error {
 func (BigEndian[W]) WriteFloat64(w W, x float64) error {
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, math.Float64bits(x))
-	if _, err := w.Write(b[:]); err != nil {
+	if err := w.Write(b[:]); err != nil {
 		return FailedWriteError{Op: "WriteFloat64"}
 	}
 	return nil
@@ -146,7 +146,7 @@ func (e BigEndian[W]) WriteString(w W, x string) error {
 	}
 	// Use unsafe conversion from a string to a byte slice to prevent copying.
 	b := *(*[]byte)(unsafe.Pointer(&x))
-	if _, err := w.Write(b); err != nil {
+	if err := w.Write(b); err != nil {
 		return FailedWriteError{Op: "WriteString"}
 	}
 	return nil
@@ -207,7 +207,7 @@ func (NetworkLittleEndian[W]) WriteString(w W, x string) error {
 		return FailedWriteError{Op: "WriteString"}
 	}
 	// Use unsafe conversion from a string to a byte slice to prevent copying.
-	if _, err := w.Write(*(*[]byte)(unsafe.Pointer(&x))); err != nil {
+	if err := w.Write(*(*[]byte)(unsafe.Pointer(&x))); err != nil {
 		return FailedWriteError{Op: "WriteString"}
 	}
 	return nil

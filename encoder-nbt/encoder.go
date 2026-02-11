@@ -26,6 +26,16 @@ func NewEncoderFromIOWriter[E Encoding[offsetWriter]](w io.Writer) NBTEncoder[of
 	return NBTEncoder[offsetWriter, E]{Writer: writer}
 }
 
+func NewEncoderToBytes[E Encoding[*SliceGrowWriter]](initBuf []uint8) (
+	enc NBTEncoder[*SliceGrowWriter, E],
+	getResult func() []uint8,
+) {
+	writer := NewSliceGrowWriter(initBuf)
+	return NBTEncoder[*SliceGrowWriter, E]{Writer: writer}, func() []uint8 {
+		return writer.Bytes()
+	}
+}
+
 func NewEncoder[W Writer, E Encoding[W]](w W) NBTEncoder[W, E] {
 	return NBTEncoder[W, E]{Writer: w}
 }
