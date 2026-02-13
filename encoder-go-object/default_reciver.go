@@ -158,6 +158,7 @@ func (c *PtrStructCompoundConstructor) GetTagPointer(
 		return v.Addr().Interface(), nil
 	}
 
+	found := false
 	// 2. struct tag 匹配（假设使用 `nbt` tag）
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
@@ -176,8 +177,13 @@ func (c *PtrStructCompoundConstructor) GetTagPointer(
 		if name == tag {
 			v := c.value.Field(i)
 			c.lastField = v
+			found = true
 			return v.Addr().Interface(), nil
 		}
+	}
+	if !found {
+		var omit any
+		return &omit, nil
 	}
 
 	return nil, fmt.Errorf("no such field for tag %q", tag)
