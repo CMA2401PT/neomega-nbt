@@ -19,6 +19,13 @@ type EncoderShim[HL nbt.EncoderHighLevel] struct {
 	HighLevelEncoder HL
 }
 
+func NewEncoderShim[HL nbt.EncoderHighLevel](enc HL) *EncoderShim[HL] {
+	return &EncoderShim[HL]{
+		HighLevelEncoder: enc,
+		Stack:            make([]EncodeStateWithLen, 0),
+	}
+}
+
 func (fa *EncoderShim[HL]) Done() bool {
 	if len(fa.Stack) == 0 && fa.EncodeState == EncodeStateEnd {
 		return true
@@ -61,6 +68,9 @@ func (fa *EncoderShim[HL]) Pop() error {
 
 		fa.Push()
 		fa.EncodeState = elementStateType
+		if err := fa.HighLevelEncoder.BeginComplexCompound(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -186,6 +196,9 @@ func (fa *EncoderShim[HL]) WriteLen(len uint32) error {
 		} else {
 			fa.Push()
 			fa.EncodeState = elementStateType
+			if err := fa.HighLevelEncoder.BeginComplexCompound(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}

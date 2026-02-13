@@ -40,10 +40,10 @@ func (err InvalidVarintError) Error() string {
 	return fmt.Sprintf("nbt: varint did not terminate after %v bytes at offset %v", err.N, err.Off)
 }
 
-type littleEndian[R seq_io.Reader] struct{}
+type LittleEndian[R seq_io.Reader] struct{}
 
 // Int16 ...
-func (littleEndian[R]) Int16(r R) (int16, error) {
+func (LittleEndian[R]) Int16(r R) (int16, error) {
 	var b [2]byte
 	if err := r.Read(b[:]); err != nil {
 		return 0, BufferOverrunError{Op: "Int16"}
@@ -53,7 +53,7 @@ func (littleEndian[R]) Int16(r R) (int16, error) {
 }
 
 // Int32 ...
-func (littleEndian[R]) Int32(r R) (int32, error) {
+func (LittleEndian[R]) Int32(r R) (int32, error) {
 	var b [4]byte
 	if err := r.Read(b[:]); err != nil {
 		return 0, BufferOverrunError{Op: "Int32"}
@@ -66,7 +66,7 @@ func (littleEndian[R]) Int32(r R) (int32, error) {
 }
 
 // Int64 ...
-func (littleEndian[R]) Int64(r R) (int64, error) {
+func (LittleEndian[R]) Int64(r R) (int64, error) {
 	var b [8]byte
 	if err := r.Read(b[:]); err != nil {
 		return 0, BufferOverrunError{Op: "Int64"}
@@ -83,7 +83,7 @@ func (littleEndian[R]) Int64(r R) (int64, error) {
 }
 
 // Float32 ...
-func (littleEndian[R]) Float32(r R) (float32, error) {
+func (LittleEndian[R]) Float32(r R) (float32, error) {
 	var b [4]byte
 	if err := r.Read(b[:]); err != nil {
 		return 0, BufferOverrunError{Op: "Float32"}
@@ -96,7 +96,7 @@ func (littleEndian[R]) Float32(r R) (float32, error) {
 }
 
 // Float64 ...
-func (littleEndian[R]) Float64(r R) (float64, error) {
+func (LittleEndian[R]) Float64(r R) (float64, error) {
 	var b [8]byte
 	if err := r.Read(b[:]); err != nil {
 		return 0, BufferOverrunError{Op: "Float64"}
@@ -113,7 +113,7 @@ func (littleEndian[R]) Float64(r R) (float64, error) {
 }
 
 // String ...
-func (e littleEndian[R]) String(r R) (string, error) {
+func (e LittleEndian[R]) String(r R) (string, error) {
 	strLen, err := e.Int16(r)
 	if err != nil {
 		return "", BufferOverrunError{Op: "String"}
@@ -125,10 +125,10 @@ func (e littleEndian[R]) String(r R) (string, error) {
 	return *(*string)(unsafe.Pointer(&b)), nil
 }
 
-type bigEndian[R seq_io.Reader] struct{}
+type BigEndian[R seq_io.Reader] struct{}
 
 // Int16 ...
-func (bigEndian[R]) Int16(r R) (int16, error) {
+func (BigEndian[R]) Int16(r R) (int16, error) {
 	b := make([]byte, 2)
 	if err := r.Read(b); err != nil {
 		return 0, BufferOverrunError{Op: "Int16"}
@@ -137,7 +137,7 @@ func (bigEndian[R]) Int16(r R) (int16, error) {
 }
 
 // Int32 ...
-func (bigEndian[R]) Int32(r R) (int32, error) {
+func (BigEndian[R]) Int32(r R) (int32, error) {
 	b := make([]byte, 4)
 	if err := r.Read(b); err != nil {
 		return 0, BufferOverrunError{Op: "Int32"}
@@ -146,7 +146,7 @@ func (bigEndian[R]) Int32(r R) (int32, error) {
 }
 
 // Int64 ...
-func (bigEndian[R]) Int64(r R) (int64, error) {
+func (BigEndian[R]) Int64(r R) (int64, error) {
 	b := make([]byte, 8)
 	if err := r.Read(b); err != nil {
 		return 0, BufferOverrunError{Op: "Float64"}
@@ -155,7 +155,7 @@ func (bigEndian[R]) Int64(r R) (int64, error) {
 }
 
 // Float32 ...
-func (bigEndian[R]) Float32(r R) (float32, error) {
+func (BigEndian[R]) Float32(r R) (float32, error) {
 	b := make([]byte, 4)
 	if err := r.Read(b); err != nil {
 		return 0, BufferOverrunError{Op: "Float32"}
@@ -164,7 +164,7 @@ func (bigEndian[R]) Float32(r R) (float32, error) {
 }
 
 // Float64 ...
-func (bigEndian[R]) Float64(r R) (float64, error) {
+func (BigEndian[R]) Float64(r R) (float64, error) {
 	b := make([]byte, 8)
 	if err := r.Read(b); err != nil {
 		return 0, BufferOverrunError{Op: "Float64"}
@@ -173,7 +173,7 @@ func (bigEndian[R]) Float64(r R) (float64, error) {
 }
 
 // String ...
-func (e bigEndian[R]) String(r R) (string, error) {
+func (e BigEndian[R]) String(r R) (string, error) {
 	strLen, err := e.Int16(r)
 	if err != nil {
 		return "", BufferOverrunError{Op: "String"}
@@ -185,10 +185,10 @@ func (e bigEndian[R]) String(r R) (string, error) {
 	return *(*string)(unsafe.Pointer(&b)), nil
 }
 
-type networklittleEndian[R seq_io.Reader] struct{ littleEndian[R] }
+type NetworklittleEndian[R seq_io.Reader] struct{ LittleEndian[R] }
 
 // Int32 ...
-func (networklittleEndian[R]) Int32(r R) (int32, error) {
+func (NetworklittleEndian[R]) Int32(r R) (int32, error) {
 	var ux uint32
 	for i := uint(0); i < 35; i += 7 {
 		b, err := r.ReadByte()
@@ -208,7 +208,7 @@ func (networklittleEndian[R]) Int32(r R) (int32, error) {
 }
 
 // Int64 ...
-func (networklittleEndian[R]) Int64(r R) (int64, error) {
+func (NetworklittleEndian[R]) Int64(r R) (int64, error) {
 	var ux uint64
 	for i := uint(0); i < 70; i += 7 {
 		b, err := r.ReadByte()
@@ -228,7 +228,7 @@ func (networklittleEndian[R]) Int64(r R) (int64, error) {
 }
 
 // String ...
-func (e networklittleEndian[R]) String(r R) (string, error) {
+func (e NetworklittleEndian[R]) String(r R) (string, error) {
 	length, err := e.stringLength(r)
 	if err != nil {
 		return "", err
@@ -241,7 +241,7 @@ func (e networklittleEndian[R]) String(r R) (string, error) {
 }
 
 // stringLength reads the length of a string as a varuint32.
-func (networklittleEndian[R]) stringLength(r R) (uint32, error) {
+func (NetworklittleEndian[R]) stringLength(r R) (uint32, error) {
 	var ux uint32
 	for i := uint(0); i < 35; i += 7 {
 		b, err := r.ReadByte()
