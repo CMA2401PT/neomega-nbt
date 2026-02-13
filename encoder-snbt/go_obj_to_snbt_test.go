@@ -46,6 +46,8 @@ func TestSnbtEncode(t *testing.T) {
 	assertVal(int32(2401), `2401`)
 	assertVal(int32(-2401), `-2401`)
 
+	assertVal(3, `3`)
+
 	assertVal(int8(0), `0b`)
 
 	assertVal(int8(3), `3b`)

@@ -9,13 +9,13 @@ import (
 )
 
 func GetDefaultDecoder(orig any, opt DecodeOption) (o DecoderOverride, err error) {
-	orig, val, kind, valueType := UnpackAny(orig, opt.SliceAsArray)
+	orig, val, kind, valueType := UnpackAny(orig, opt.SliceAsArray, opt.IntAsInt64)
 	if !valueType.IsValid() {
 		err = fmt.Errorf("unaccapt value %v to nbt value type", orig)
 		return
 	}
 	if valueType.IsTrivial() {
-		return TrivialValueDecoder{orig, val, kind, valueType}, nil
+		return TrivialValueDecoder{orig, val, kind, valueType, opt.IntAsInt64}, nil
 	}
 	if valueType.IsArray() {
 		return ArrayValueDecoder{orig, val, kind, valueType}, nil
@@ -33,7 +33,7 @@ func GetDefaultDecoder(orig any, opt DecodeOption) (o DecoderOverride, err error
 }
 
 // 将一个 any 类型去除指针化，并获得 go 的反射值，类型和 nbt 类型
-func UnpackAny(orig any, sliceAsArray bool) (any, reflect.Value, reflect.Kind, nbt.HighLevelValueType) {
+func UnpackAny(orig any, sliceAsArray bool, intAsInt64 bool) (any, reflect.Value, reflect.Kind, nbt.HighLevelValueType) {
 	val := reflect.ValueOf(orig)
 	kind := val.Kind()
 	for val.Kind() == reflect.Pointer {
@@ -41,15 +41,16 @@ func UnpackAny(orig any, sliceAsArray bool) (any, reflect.Value, reflect.Kind, n
 		val = reflect.ValueOf(orig)
 		kind = val.Kind()
 	}
-	vt := ReflectKindToHighLevelValueType(kind, func() reflect.Type { return val.Type() }, sliceAsArray)
+	vt := ReflectKindToHighLevelValueType(kind, func() reflect.Type { return val.Type() }, sliceAsArray, intAsInt64)
 	return orig, val, kind, vt
 }
 
 type TrivialValueDecoder struct {
-	orig      any
-	val       reflect.Value
-	kind      reflect.Kind
-	valueType nbt.HighLevelValueType
+	orig       any
+	val        reflect.Value
+	kind       reflect.Kind
+	valueType  nbt.HighLevelValueType
+	intAsInt64 bool
 }
 
 func (d TrivialValueDecoder) GetNBType() nbt.HighLevelValueType {
@@ -57,7 +58,7 @@ func (d TrivialValueDecoder) GetNBType() nbt.HighLevelValueType {
 }
 
 func (d TrivialValueDecoder) DecodeTo(valuePos nbt.ValuePos, encoder nbt.EncoderHighLevel, _ GetDecoderFunc) error {
-	return WriteTrivialReflectValue(d.kind, d.val, encoder, valuePos)
+	return WriteTrivialReflectValue(d.kind, d.val, encoder, valuePos, d.intAsInt64)
 }
 
 type ListValueDecoder struct {
@@ -81,7 +82,7 @@ func (d ListValueDecoder) DecodeTo(_ nbt.ValuePos, encoder nbt.EncoderHighLevel,
 	val := d.val
 	elem := val.Type().Elem()
 	n := val.Len()
-	et := ReflectKindToHighLevelValueType(elem.Kind(), func() reflect.Type { return elem.Elem() }, d.opt.SliceAsArray)
+	et := ReflectKindToHighLevelValueType(elem.Kind(), func() reflect.Type { return elem.Elem() }, d.opt.SliceAsArray, d.opt.IntAsInt64)
 	typeCheck := false
 	typeErase := false
 	if et == nbt.Invalid {
@@ -90,7 +91,7 @@ func (d ListValueDecoder) DecodeTo(_ nbt.ValuePos, encoder nbt.EncoderHighLevel,
 		}
 		// 否则，就从第一个元素推断实际类型
 		fisrtElem := val.Index(0).Interface()
-		_, _, _, et = UnpackAny(fisrtElem, d.opt.SliceAsArray)
+		_, _, _, et = UnpackAny(fisrtElem, d.opt.SliceAsArray, d.opt.IntAsInt64)
 		// 如果第一个元素类型也不知道，就万策尽了
 		if et == nbt.Invalid {
 			return fmt.Errorf("unaccaptable type %v to nbt list element", elem)

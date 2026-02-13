@@ -21,6 +21,8 @@ type DecodeOption struct {
 	SortMapKey bool
 	// 一般为 "nbt" 即当存在这个标签时，使用标签指定的名字
 	TagName string
+	// 当遇到 int 类型时，是否应该作为 int64
+	IntAsInt64 bool
 }
 
 func HighLevelDecodeTo(

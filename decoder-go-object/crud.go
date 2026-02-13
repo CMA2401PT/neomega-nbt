@@ -6,8 +6,14 @@ import (
 	"reflect"
 )
 
-func ReflectKindToHighLevelValueType(kind reflect.Kind, vt func() reflect.Type, sliceAsArray bool) nbt.HighLevelValueType {
+func ReflectKindToHighLevelValueType(kind reflect.Kind, vt func() reflect.Type, sliceAsArray bool, intAsInt64 bool) nbt.HighLevelValueType {
 	switch kind {
+	case reflect.Int, reflect.Uint:
+		if intAsInt64 {
+			return nbt.TrivialLong
+		} else {
+			return nbt.TrivialInt
+		}
 	case reflect.Int8, reflect.Uint8, reflect.Bool:
 		return nbt.TrivialByte
 	case reflect.Int16, reflect.Uint16:
@@ -55,8 +61,20 @@ func ReflectKindToHighLevelValueType(kind reflect.Kind, vt func() reflect.Type, 
 	}
 }
 
-func WriteTrivialReflectValue[E nbt.WriteTrivialWithPos](kind reflect.Kind, val reflect.Value, reciver E, vp nbt.ValuePos) error {
+func WriteTrivialReflectValue[E nbt.WriteTrivialWithPos](kind reflect.Kind, val reflect.Value, reciver E, vp nbt.ValuePos, intAsInt64 bool) error {
 	switch kind {
+	case reflect.Int:
+		if intAsInt64 {
+			return reciver.WriteInt64(int64(val.Int()), vp)
+		} else {
+			return reciver.WriteInt32(int32(val.Int()), vp)
+		}
+	case reflect.Uint:
+		if intAsInt64 {
+			return reciver.WriteInt64(int64(val.Uint()), vp)
+		} else {
+			return reciver.WriteInt32(int32(val.Uint()), vp)
+		}
 	case reflect.Int8:
 		return reciver.WriteInt8(int8(val.Int()), vp)
 	case reflect.Uint8:

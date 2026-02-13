@@ -245,6 +245,29 @@ func TestEncode(t *testing.T) {
 	})
 	expect(ap, "2")
 
+	// 指针
+	var aInt int
+	Encode(&aInt, func(e *GoObjEncoder) {
+		e.WriteRootTag("", nbt.TrivialByte)
+		e.WriteInt8(2, 0)
+	})
+	expect(aInt, "2")
+
+	Encode(&aInt, func(e *GoObjEncoder) {
+		e.WriteRootTag("", nbt.TrivialByte)
+		e.WriteInt32(3, 0)
+	})
+	expect(aInt, "3")
+	Encode(&aInt, func(e *GoObjEncoder) {
+		e.WriteRootTag("", nbt.TrivialByte)
+		e.WriteInt32(4, 0)
+	})
+	expect(aInt, "4")
+	Encode(&aInt, func(e *GoObjEncoder) {
+		e.WriteRootTag("", nbt.TrivialByte)
+		e.WriteInt64(5, 0)
+	})
+	expect(aInt, "5")
 	// 自定义覆写
 	var b MyInt8ListOverride
 	Encode(&b, func(e *GoObjEncoder) {
