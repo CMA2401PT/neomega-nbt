@@ -37,27 +37,25 @@ func writeString[W seq_io.Writer](w W, data string) error {
 func writeInt[W seq_io.Writer, T interface {
 	int8 | uint8 | int16 | uint16 | int32 | uint32 | int64 | uint64
 }](w W, i T) error {
-	buf := [32]byte{}
+	// Convert the magnitude in uint64 so negating the smallest signed value cannot overflow.
+	var magnitude uint64
 	if i < 0 {
 		if err := w.WriteByte('-'); err != nil {
 			return err
 		}
-		i = -i
+		magnitude = uint64(-(i + 1)) + 1
+	} else {
+		magnitude = uint64(i)
 	}
-	off := 0
-	for i >= 10 {
-		buf[off] = uint8(i%10) + '0'
-		off += 1
-		i = i / 10
-	}
-	if err := w.WriteByte(uint8(i) + '0'); err != nil {
-		return err
-	}
-	for off != 0 {
-		if err := w.WriteByte(buf[off-1]); err != nil {
-			return err
+	var buf [20]byte
+	off := len(buf)
+	for {
+		off--
+		buf[off] = byte(magnitude%10) + '0'
+		magnitude /= 10
+		if magnitude == 0 {
+			break
 		}
-		off -= 1
 	}
-	return nil
+	return w.Write(buf[off:])
 }

@@ -25,6 +25,12 @@ func fastPathNumericSlice[T any, R nbt.EncoderHighLevel](
 ) error {
 	list := castSliceView[T](v)
 	n := len(list)
+	if n == 0 {
+		if array {
+			return reciver.BeginAndEndComplexEmptyArray(et)
+		}
+		return reciver.BeginAndEndComplexEmptyTypedList(et)
+	}
 
 	if array {
 		if err := reciver.BeginComplexArray(et, n); err != nil {
@@ -157,6 +163,9 @@ func HighLevelDecodeListToFastPath[R nbt.EncoderHighLevel](
 	case reflect.String:
 		list := castSliceView[string](rv)
 		n := len(list)
+		if n == 0 {
+			return true, reciver.BeginAndEndComplexEmptyTypedList(nbt.TrivialString)
+		}
 		if err := reciver.BeginComplexList(nbt.TrivialString, n, false); err != nil {
 			return true, err
 		}

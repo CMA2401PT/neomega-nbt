@@ -1,8 +1,10 @@
+// Package v1 provides ready-to-use conversions between Go values, NBT and SNBT.
 package v1
 
 import (
-	"errors"
+	"fmt"
 	"io"
+	nbt "neomega-nbt"
 	decoder_go_object "neomega-nbt/decoder-go-object"
 	decoder_nbt "neomega-nbt/decoder-nbt"
 	decoder_shim "neomega-nbt/decoder-shim"
@@ -15,9 +17,16 @@ import (
 type Encoding uint8
 
 const (
-	EncodingLittleEdian = Encoding(iota + 1)
-	EncodingBigEdian
-	EncodingNetworkLittleEdian
+	EncodingLittleEndian Encoding = iota + 1
+	EncodingBigEndian
+	EncodingNetworkLittleEndian
+)
+
+// Retain the original spellings for existing callers.
+const (
+	EncodingLittleEdian        = EncodingLittleEndian
+	EncodingBigEdian           = EncodingBigEndian
+	EncodingNetworkLittleEdian = EncodingNetworkLittleEndian
 )
 
 type OptDecodeFromNBT struct {
@@ -25,119 +34,84 @@ type OptDecodeFromNBT struct {
 	encoder_go_object.EncodeOption
 }
 
-type OptDecodeToNBT struct {
+type OptEncodeToNBT struct {
 	Encoding Encoding
 	decoder_go_object.DecodeOption
 }
 
-func DecodeFromNBTBytes(data []uint8, ptr any, opt OptDecodeFromNBT) error {
-	switch opt.Encoding {
+// OptDecodeToNBT is the original name of OptEncodeToNBT.
+type OptDecodeToNBT = OptEncodeToNBT
+
+func decodeNBT[R seq_io.Reader](reader R, encoder nbt.Encoder, encoding Encoding) error {
+	switch encoding {
+	case EncodingLittleEndian:
+		return decoder_nbt.Decode[R, decoder_nbt.LittleEndian[R]](reader, encoder)
+	case EncodingBigEndian:
+		return decoder_nbt.Decode[R, decoder_nbt.BigEndian[R]](reader, encoder)
+	case EncodingNetworkLittleEndian:
+		return decoder_nbt.Decode[R, decoder_nbt.NetworklittleEndian[R]](reader, encoder)
 	default:
-		return errors.New("must specific encoding")
-	case EncodingLittleEdian:
-		return decoder_nbt.DecodeFromBytes[[]uint8, decoder_nbt.LittleEndian[*seq_io.ByteReader[[]uint8]]](
-			data,
-			encoder_shim.NewEncoderShim(
-				encoder_go_object.NewGoObjEncoder(ptr,
-					opt.EncodeOption,
-				),
-			),
-		)
-	case EncodingBigEdian:
-		return decoder_nbt.DecodeFromBytes[[]uint8, decoder_nbt.BigEndian[*seq_io.ByteReader[[]uint8]]](
-			data,
-			encoder_shim.NewEncoderShim(
-				encoder_go_object.NewGoObjEncoder(ptr,
-					opt.EncodeOption,
-				),
-			),
-		)
-	case EncodingNetworkLittleEdian:
-		return decoder_nbt.DecodeFromBytes[[]uint8, decoder_nbt.BigEndian[*seq_io.ByteReader[[]uint8]]](
-			data,
-			encoder_shim.NewEncoderShim(
-				encoder_go_object.NewGoObjEncoder(ptr,
-					opt.EncodeOption,
-				),
-			),
-		)
+		return fmt.Errorf("unsupported NBT encoding: %d", encoding)
 	}
 }
 
-func EncodeToNBTBytes(data any, opt OptDecodeToNBT) ([]uint8, error) {
-	writer := seq_io.NewSliceGrowWriter(nil)
-	switch opt.Encoding {
+func newNBTEncoder[W seq_io.Writer](writer W, encoding Encoding) (nbt.Encoder, error) {
+	switch encoding {
+	case EncodingLittleEndian:
+		return encoder_nbt.NewEncoder[W, encoder_nbt.LittleEndian[W]](writer), nil
+	case EncodingBigEndian:
+		return encoder_nbt.NewEncoder[W, encoder_nbt.BigEndian[W]](writer), nil
+	case EncodingNetworkLittleEndian:
+		return encoder_nbt.NewEncoder[W, encoder_nbt.NetworkLittleEndian[W]](writer), nil
 	default:
-		return nil, errors.New("must specific encoding")
-	case EncodingLittleEdian:
-		enc := encoder_nbt.NewEncoder[*seq_io.SliceGrowWriter, encoder_nbt.LittleEndian[*seq_io.SliceGrowWriter]](writer)
-		err := decoder_go_object.HighLevelDecodeTo(data, decoder_shim.NewDecoderShim(enc), opt.DecodeOption)
-		if err != nil {
-			return nil, err
-		}
-	case EncodingBigEdian:
-		enc := encoder_nbt.NewEncoder[*seq_io.SliceGrowWriter, encoder_nbt.BigEndian[*seq_io.SliceGrowWriter]](writer)
-		err := decoder_go_object.HighLevelDecodeTo(data, decoder_shim.NewDecoderShim(enc), opt.DecodeOption)
-		if err != nil {
-			return nil, err
-		}
-	case EncodingNetworkLittleEdian:
-		enc := encoder_nbt.NewEncoder[*seq_io.SliceGrowWriter, encoder_nbt.NetworkLittleEndian[*seq_io.SliceGrowWriter]](writer)
-		err := decoder_go_object.HighLevelDecodeTo(data, decoder_shim.NewDecoderShim(enc), opt.DecodeOption)
-		if err != nil {
-			return nil, err
-		}
+		return nil, fmt.Errorf("unsupported NBT encoding: %d", encoding)
+	}
+}
+
+// DecodeFromNBTBytes reads one NBT root into ptr. The root name is ignored.
+func DecodeFromNBTBytes(data []byte, ptr any, opt OptDecodeFromNBT) error {
+	return decodeNBT(seq_io.NewByteReaderFromBytes(data), encoder_shim.NewEncoderShim(
+		encoder_go_object.NewGoObjEncoder(ptr, opt.EncodeOption),
+	), opt.Encoding)
+}
+
+func EncodeToNBTBytes(data any, opt OptEncodeToNBT) ([]byte, error) {
+	writer := seq_io.NewSliceGrowWriter(nil)
+	if err := encodeToNBT(data, writer, opt); err != nil {
+		return nil, err
 	}
 	return writer.Bytes(), nil
 }
 
+// DecodeFromNBT reads one NBT root, leaving following data in reader.
 func DecodeFromNBT(reader io.Reader, ptr any, opt OptDecodeFromNBT) error {
-	switch opt.Encoding {
-	default:
-		return errors.New("must specific encoding")
-	case EncodingLittleEdian:
-		return decoder_nbt.Decode[seq_io.OffsetReader, decoder_nbt.LittleEndian[seq_io.OffsetReader]](
-			seq_io.NewOffsetReader(reader),
-			encoder_shim.NewEncoderShim(
-				encoder_go_object.NewGoObjEncoder(ptr,
-					opt.EncodeOption,
-				),
-			),
-		)
-	case EncodingBigEdian:
-		return decoder_nbt.Decode[seq_io.OffsetReader, decoder_nbt.BigEndian[seq_io.OffsetReader]](
-			seq_io.NewOffsetReader(reader),
-			encoder_shim.NewEncoderShim(
-				encoder_go_object.NewGoObjEncoder(ptr,
-					opt.EncodeOption,
-				),
-			),
-		)
-	case EncodingNetworkLittleEdian:
-		return decoder_nbt.Decode[seq_io.OffsetReader, decoder_nbt.NetworklittleEndian[seq_io.OffsetReader]](
-			seq_io.NewOffsetReader(reader),
-			encoder_shim.NewEncoderShim(
-				encoder_go_object.NewGoObjEncoder(ptr,
-					opt.EncodeOption,
-				),
-			),
-		)
-	}
+	return decodeNBT(seq_io.NewOffsetReader(reader), encoder_shim.NewEncoderShim(
+		encoder_go_object.NewGoObjEncoder(ptr, opt.EncodeOption),
+	), opt.Encoding)
 }
 
-func EncodeToNBT(data any, w io.Writer, opt OptDecodeToNBT) error {
-	writer := seq_io.NewOffsetWriter(w)
-	switch opt.Encoding {
-	default:
-		return errors.New("must specific encoding")
-	case EncodingLittleEdian:
-		enc := encoder_nbt.NewEncoder[seq_io.OffsetWriter, encoder_nbt.LittleEndian[seq_io.OffsetWriter]](writer)
-		return decoder_go_object.HighLevelDecodeTo(data, decoder_shim.NewDecoderShim(enc), opt.DecodeOption)
-	case EncodingBigEdian:
-		enc := encoder_nbt.NewEncoder[seq_io.OffsetWriter, encoder_nbt.BigEndian[seq_io.OffsetWriter]](writer)
-		return decoder_go_object.HighLevelDecodeTo(data, decoder_shim.NewDecoderShim(enc), opt.DecodeOption)
-	case EncodingNetworkLittleEdian:
-		enc := encoder_nbt.NewEncoder[seq_io.OffsetWriter, encoder_nbt.NetworkLittleEndian[seq_io.OffsetWriter]](writer)
-		return decoder_go_object.HighLevelDecodeTo(data, decoder_shim.NewDecoderShim(enc), opt.DecodeOption)
+func EncodeToNBT(data any, writer io.Writer, opt OptEncodeToNBT) error {
+	return encodeToNBT(data, seq_io.NewOffsetWriter(writer), opt)
+}
+
+func encodeToNBT[W seq_io.Writer](data any, writer W, opt OptEncodeToNBT) error {
+	encoder, err := newNBTEncoder(writer, opt.Encoding)
+	if err != nil {
+		return err
 	}
+	return decoder_go_object.HighLevelDecodeTo(data, decoder_shim.NewDecoderShim(encoder), opt.DecodeOption)
+}
+
+// ConvertNBT changes the binary encoding without constructing an intermediate Go object.
+// It preserves root names, tag types and compound order.
+func ConvertNBT(data []byte, from, to Encoding) ([]byte, error) {
+	writer := seq_io.NewSliceGrowWriter(nil)
+	encoder, err := newNBTEncoder(writer, to)
+	if err != nil {
+		return nil, err
+	}
+	if err := decodeNBT(seq_io.NewByteReaderFromBytes(data), encoder, from); err != nil {
+		return nil, err
+	}
+	return writer.Bytes(), nil
 }

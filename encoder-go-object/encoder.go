@@ -239,3 +239,16 @@ func (e *GoObjEncoder) HasFlag(flag nbt.Flag) bool {
 	}
 	return false
 }
+
+func (e *GoObjEncoder) BeginAndEndComplexEmptyTypedList(valueType nbt.HighLevelValueType) error {
+	if e.Current.ListConstructor == nil {
+		return fmt.Errorf("%T cannot accept list", e.Current.PtrToData)
+	}
+	return e.Current.ListConstructor.TypedEmptyList(valueType)
+}
+func (e *GoObjEncoder) BeginAndEndComplexEmptyArray(valueType nbt.HighLevelValueType) error {
+	if e.Current.ArrayConstructor == nil {
+		return fmt.Errorf("%T cannot accept array", e.Current.PtrToData)
+	}
+	return e.Current.ArrayConstructor.EmptyArray(valueType)
+}

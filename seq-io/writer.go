@@ -23,7 +23,10 @@ func NewOffsetWriter(w io.Writer) OffsetWriter {
 		writer = OffsetWriter{w: w, writeByte: func(b byte) error {
 			var buf [1]byte
 			buf[0] = b
-			_, err := w.Write(buf[:])
+			n, err := w.Write(buf[:])
+			if err == nil && n != 1 {
+				return io.ErrShortWrite
+			}
 			return err
 		}}
 	}
@@ -32,8 +35,11 @@ func NewOffsetWriter(w io.Writer) OffsetWriter {
 
 // Write writes a byte slice to the underlying io.Writer. It increases the byte offset by exactly n.
 func (w OffsetWriter) Write(b []byte) (err error) {
-	_, err = w.w.Write(b)
-	return
+	n, err := w.w.Write(b)
+	if err == nil && n != len(b) {
+		return io.ErrShortWrite
+	}
+	return err
 }
 
 func (w OffsetWriter) WriteByte(b byte) (err error) {

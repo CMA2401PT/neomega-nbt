@@ -69,6 +69,9 @@ func DecodeCompound(
 			}
 			return encoder.WriteCompoundTag(key, hlvt)
 		}, nbt.ValuePosCompoundOrRoot)
+		if err != nil {
+			return snbt, err
+		}
 		snbt = consumeWhiteSpace(snbt)
 		if len(snbt) == 0 {
 			return snbt, errors.New("missing ending }")

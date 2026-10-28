@@ -68,6 +68,8 @@ func GetTrivialReciver(ptrToData any, valueType nbt.HighLevelValueType, val refl
 		switch vk := val.Kind(); vk {
 		default:
 			return nil, fmt.Errorf("cannot parse %v as %T", valueType, ptrToData)
+		case reflect.Bool:
+			return func(v any, i64 int64) error { val.SetBool(i64 != 0); return nil }, nil
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			return func(v any, i64 int64) error {
 				val.SetInt(i64)

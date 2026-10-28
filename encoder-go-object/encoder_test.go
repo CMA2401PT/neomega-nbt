@@ -650,3 +650,12 @@ func (m MyMapToDefaultOverride) String() string {
 	}
 	return "MyMapToDefaultOverride[" + strings.Join(keys, ", ") + "]"
 }
+
+func (c *MyInt8ListConstructor) TypedEmptyList(valueType nbt.HighLevelValueType) error {
+	_, err := c.GetReusableElementPointer(valueType, 0, false)
+	return err
+}
+func (c *MyInt8ArrayConstructor) EmptyArray(valueType nbt.HighLevelValueType) error {
+	_, err := c.GetReusableElementPointer(valueType, 0)
+	return err
+}

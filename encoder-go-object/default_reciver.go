@@ -86,7 +86,7 @@ func (c *PtrMapCompoundConstructor) OnResetCompound() error {
 	c.value.Set(m)
 	c.elementType = valType.Elem()
 	c.keyType = valType.Key()
-	c.lastValue = reflect.New(c.elementType).Elem()
+	c.lastValue = reflect.Value{}
 	return nil
 }
 
@@ -118,6 +118,9 @@ func (c *PtrMapCompoundConstructor) OnNextElement() error {
 }
 
 func (c *PtrMapCompoundConstructor) OnCompoundFinish() error {
+	if !c.lastValue.IsValid() {
+		return nil
+	}
 	key := reflect.New(c.keyType).Elem()
 	key.SetString(c.lastTag)
 	c.value.SetMapIndex(key, c.lastValue.Elem())
@@ -149,7 +152,7 @@ func (c *PtrStructCompoundConstructor) GetTagPointer(
 	t := c.value.Type()
 
 	// 1. 优先：字段名匹配
-	if f, ok := t.FieldByName(tag); ok {
+	if f, ok := t.FieldByName(tag); ok && f.Tag.Get(c.opt.TagName) == "" {
 		v := c.value.FieldByIndex(f.Index)
 		if !v.CanSet() {
 			return nil, fmt.Errorf("field %s cannot be set", tag)
@@ -162,6 +165,9 @@ func (c *PtrStructCompoundConstructor) GetTagPointer(
 	// 2. struct tag 匹配（假设使用 `nbt` tag）
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
+		if f.PkgPath != "" {
+			continue
+		}
 
 		raw := f.Tag.Get(c.opt.TagName)
 		if raw == "-" {
@@ -323,6 +329,8 @@ func (c *AnyListConstructor) GetReusableElementPointer(valueType nbt.HighLevelVa
 				listPtr = new([]float32)
 			case nbt.TrivialDouble:
 				listPtr = new([]float64)
+			case nbt.TrivialString:
+				listPtr = new([]string)
 			default:
 				panic(fmt.Errorf("%v is not trivial type", valueType))
 			}
@@ -489,7 +497,7 @@ func (c *AnyArrayConstructor) GetReusableElementPointer(valueType nbt.HighLevelV
 
 func (c *AnyArrayConstructor) HasFlag(flag nbt.Flag) bool {
 	switch flag {
-	case nbt.FLAG_OMIT_LIST_LEN:
+	case nbt.FLAG_OMIT_ARRAY_LEN:
 		return c.isSlice // 这个实现支持动态扩容，所以不必准确报告 array 长度
 	default:
 		return false
@@ -498,6 +506,40 @@ func (c *AnyArrayConstructor) HasFlag(flag nbt.Flag) bool {
 
 func (c *AnyArrayConstructor) OnArrayFinish() error {
 	if err := c.PtrArrayConstructor.OnArrayFinish(); err != nil {
+		return err
+	}
+	c.anyRV.Set(c.postponeReciver)
+	return nil
+}
+
+// Empty sequences bypass the pending-element commit in OnListFinish/OnArrayFinish.
+func (c *PtrListConstructor) TypedEmptyList(valueType nbt.HighLevelValueType) error {
+	if _, err := c.GetReusableElementPointer(valueType, 0, false); err != nil {
+		return err
+	}
+	return c.finish()
+}
+func (c *AnyListConstructor) TypedEmptyList(valueType nbt.HighLevelValueType) error {
+	if _, err := c.GetReusableElementPointer(valueType, 0, false); err != nil {
+		return err
+	}
+	if err := c.finish(); err != nil {
+		return err
+	}
+	c.anyRV.Set(c.postponeReciver)
+	return nil
+}
+func (c *PtrArrayConstructor) EmptyArray(valueType nbt.HighLevelValueType) error {
+	if _, err := c.GetReusableElementPointer(valueType, 0); err != nil {
+		return err
+	}
+	return c.finish()
+}
+func (c *AnyArrayConstructor) EmptyArray(valueType nbt.HighLevelValueType) error {
+	if _, err := c.GetReusableElementPointer(valueType, 0); err != nil {
+		return err
+	}
+	if err := c.finish(); err != nil {
 		return err
 	}
 	c.anyRV.Set(c.postponeReciver)

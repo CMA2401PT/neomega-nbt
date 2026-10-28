@@ -38,10 +38,10 @@ func GetTrivialReciverFastPath(ptrToData any, valueType nbt.HighLevelValueType, 
 
 	case nbt.TrivialInt:
 		switch elem.Kind() {
-		case reflect.Int32, reflect.Int:
+		case reflect.Int32:
 			return true, makePtrReciver[int32](ptr,
 				func(i64 int64, _ any) int32 { return int32(i64) }), nil
-		case reflect.Uint32, reflect.Uint:
+		case reflect.Uint32:
 			return true, makePtrReciver[uint32](ptr,
 				func(i64 int64, _ any) uint32 { return uint32(i64) }), nil
 		}

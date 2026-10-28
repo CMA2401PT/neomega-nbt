@@ -68,8 +68,10 @@ func (fa *EncoderShim[HL]) Pop() error {
 
 		fa.Push()
 		fa.EncodeState = elementStateType
-		if err := fa.HighLevelEncoder.BeginComplexCompound(); err != nil {
-			return err
+		if elementStateType == EncodeStateCompound {
+			if err := fa.HighLevelEncoder.BeginComplexCompound(); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -182,20 +184,18 @@ func (fa *EncoderShim[HL]) WriteLen(len uint32) error {
 		}
 		fa.Aux = len
 		elementStateType := fa.UnBoxListElementType()
+		if len == 0 {
+			if err := fa.HighLevelEncoder.BeginAndEndComplexEmptyTypedList(UnmapToBasicValueType(elementStateType)); err != nil {
+				return err
+			}
+			return fa.Pop()
+		}
 		if err := fa.HighLevelEncoder.BeginComplexList(UnmapToBasicValueType(elementStateType), int(len), false); err != nil {
 			return err
 		}
-		if len == 0 {
-			if err := fa.HighLevelEncoder.EndComplexList(); err != nil {
-				return err
-			}
-			if err := fa.Pop(); err != nil {
-				return err
-			}
-
-		} else {
-			fa.Push()
-			fa.EncodeState = elementStateType
+		fa.Push()
+		fa.EncodeState = elementStateType
+		if elementStateType == EncodeStateCompound {
 			if err := fa.HighLevelEncoder.BeginComplexCompound(); err != nil {
 				return err
 			}
@@ -206,29 +206,25 @@ func (fa *EncoderShim[HL]) WriteLen(len uint32) error {
 		if fa.Aux != 0 {
 			return fa.UnexpectError()
 		}
+		var elementType nbt.HighLevelValueType
 		switch fa.EncodeState {
 		case EncodeStateByteArray:
-			if err := fa.HighLevelEncoder.BeginComplexArray(nbt.TrivialByte, int(len)); err != nil {
-				return err
-			}
+			elementType = nbt.TrivialByte
 		case EncodeStateIntArray:
-			if err := fa.HighLevelEncoder.BeginComplexArray(nbt.TrivialInt, int(len)); err != nil {
-				return err
-			}
+			elementType = nbt.TrivialInt
 		case EncodeStateLongArray:
-			if err := fa.HighLevelEncoder.BeginComplexArray(nbt.TrivialLong, int(len)); err != nil {
+			elementType = nbt.TrivialLong
+		}
+		if len == 0 {
+			if err := fa.HighLevelEncoder.BeginAndEndComplexEmptyArray(elementType); err != nil {
 				return err
 			}
+			return fa.Pop()
+		}
+		if err := fa.HighLevelEncoder.BeginComplexArray(elementType, int(len)); err != nil {
+			return err
 		}
 		fa.Aux = len
-		if len == 0 {
-			if err := fa.HighLevelEncoder.EndComplexArray(); err != nil {
-				return err
-			}
-			if err := fa.Pop(); err != nil {
-				return err
-			}
-		}
 		return nil
 	}
 
@@ -253,12 +249,11 @@ func (fa *EncoderShim[HL]) CanWriteNumberValue(expect EncodeState) bool {
 }
 
 func (fa *EncoderShim[HL]) ValuePos() nbt.ValuePos {
-	if fa.Aux > 0 {
-		if fa.EncodeState&EncodeStateNumberArray == EncodeStateNumberArray {
-			return nbt.ValuePosArray
-		} else {
-			return nbt.ValuePosList
-		}
+	if fa.EncodeState&EncodeStateNumberArray == EncodeStateNumberArray {
+		return nbt.ValuePosArray
+	}
+	if len(fa.Stack) > 0 && fa.Stack[len(fa.Stack)-1].EncodeState&EncodeStateList == EncodeStateList {
+		return nbt.ValuePosList
 	}
 	return nbt.ValuePosCompoundOrRoot
 }

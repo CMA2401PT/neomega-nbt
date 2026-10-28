@@ -64,7 +64,7 @@ func DecodeNumOrString(
 					return snbt, err
 				}
 			case 5:
-				if err := onKnownValuetype(nbt.TrivialFloat); err != nil {
+				if err := onKnownValuetype(nbt.TrivialDouble); err != nil {
 					return snbt, err
 				}
 				if err := encoder.WriteFloat64(number.Val().(float64), valuePos); err != nil {

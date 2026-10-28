@@ -81,3 +81,10 @@ func (s DecoderShim[LL]) WriteFloat64(i float64, _ nbt.ValuePos) error {
 func (s DecoderShim[LL]) WriteString(i string, _ nbt.ValuePos) error {
 	return s.LowLevelEncoder.WriteString(i)
 }
+
+func (s DecoderShim[LL]) BeginAndEndComplexEmptyTypedList(valueType nbt.HighLevelValueType) error {
+	return s.BeginComplexList(valueType, 0, false)
+}
+func (s DecoderShim[LL]) BeginAndEndComplexEmptyArray(valueType nbt.HighLevelValueType) error {
+	return s.LowLevelEncoder.WriteLen(0)
+}

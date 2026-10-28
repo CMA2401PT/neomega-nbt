@@ -43,6 +43,7 @@ func DecodeSnbtValue(
 	rest []uint8, // 剩余的不属于此 snbt 部分的内容
 	err error,
 ) {
+	snbt = consumeWhiteSpace(snbt)
 	snbt, leftType := leftBracket(snbt)
 	switch leftType {
 	case ltByteArr: // [B;

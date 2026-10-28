@@ -6,9 +6,8 @@ import (
 	whitespace "neomega-nbt/decoder-snbt/tokens/white_space"
 )
 
-func emptyCheck(snbt []uint8) (ok bool) {
-	_, ok = tokens.MatchToken(snbt, whitespace.FinityVariyLenWhiteSpace{})
-	return
+func emptyCheck(snbt []uint8) bool {
+	return len(consumeWhiteSpace(snbt)) == 0
 }
 
 func consumeWhiteSpace(snbt []uint8) []uint8 {

@@ -121,6 +121,15 @@ func GetArrayElementWritor(val reflect.Value, reciver nbt.EncoderHighLevel) (
 	}
 
 	switch elemType.Kind() {
+	case reflect.Bool:
+		et = nbt.TrivialByte
+		writeElem = func(i int) error {
+			var value int8
+			if val.Index(i).Bool() {
+				value = 1
+			}
+			return reciver.WriteInt8(value, nbt.ValuePosArray)
+		}
 	case reflect.Int8:
 		et = nbt.TrivialByte
 		writeElem = func(i int) error {

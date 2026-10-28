@@ -104,3 +104,13 @@ func (e SnbtEncoderHighLevel[W]) HasFlag(flag nbt.Flag) bool {
 		return false
 	}
 }
+
+func (e SnbtEncoderHighLevel[W]) BeginAndEndComplexEmptyTypedList(nbt.HighLevelValueType) error {
+	return e.BeginAndEndComplexEmptyList()
+}
+func (e SnbtEncoderHighLevel[W]) BeginAndEndComplexEmptyArray(valueType nbt.HighLevelValueType) error {
+	if err := e.BeginComplexArray(valueType, 0); err != nil {
+		return err
+	}
+	return e.EndComplexArray()
+}

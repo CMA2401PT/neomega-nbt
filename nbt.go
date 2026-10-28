@@ -9,7 +9,7 @@ package neomega_nbt
 // ...,WriteType(tagList),WriteEmptyListMark()/ WriteType(tagInt),WriteLen(len),WriteInt(int32),...,WriteInt(int32)
 // ...,WriteType(tagCompound),WriteType(tagInt),WriteTag("tag"),...,WriteEnd()
 // 显然，并非所有的操作序列都能接受
-// 因此，我们定义了一个实际上什么都不写入，仅仅返回错误的 DecoderFA 来验证序列是否可接受
+// encoder-shim 用状态机检查操作顺序并生成高层事件；配合 VoidEncoderHighLevel 可只检查而不生成数据。
 type Encoder interface {
 	WriteType(TagType) error
 	WriteTag(tag string) error
@@ -56,7 +56,7 @@ type EncoderHighLevel interface {
 	WriteRootTag(tag string, valueType HighLevelValueType) error
 
 	// 接下来会是一个 Array，其类型为 valueType in [TagByte,TagInt,TagLong]
-	// 第一个 array 元素前被调用
+	// 第一个 array 元素前被调用；已知为空时使用专用空数组算子。
 	// 紧接其后的是一个 WriteTrivialWithPos，类型不会被报告
 	BeginComplexArray(valueType HighLevelValueType, len int) error
 	// 在每两个 array 元素间被调用，即逗号位置
@@ -78,6 +78,10 @@ type EncoderHighLevel interface {
 
 	// 特殊情况，是一个空的列表，类型也未知
 	BeginAndEndComplexEmptyList() error
+	// 已知元素类型的空列表，保留其类型；不再调用 Begin/EndComplexList。
+	BeginAndEndComplexEmptyTypedList(valueType HighLevelValueType) error
+	// 空数值数组，valueType 为 Byte、Int 或 Long；不再调用 Begin/EndComplexArray。
+	BeginAndEndComplexEmptyArray(valueType HighLevelValueType) error
 	// 接下来会是一个 List，其中元素类型定义与 valueType 一致
 	// 类型会通过 NextListElement 报告
 	// 紧接其后的是一个 WriteTrivialWithPos， 但是
@@ -89,6 +93,7 @@ type EncoderHighLevel interface {
 	// 在一些情况下，传入元素数量可能与开始时报告的不同，
 	// 若支持这种情况（比如 go 的 slice 可以动态扩容）
 	// 应当在 HasFlag 中标记 FLAG_OMIT_LIST_LEN
+	// 已知为空时使用专用空列表算子；未知长度仍可在接收端允许时报告 0。
 	BeginComplexList(valueType HighLevelValueType, len int, typeErase bool) error
 	// 在每两个 list 元素间被调用，即逗号位置
 	// 下一个元素的类型被报告，因为可能类型发生变化

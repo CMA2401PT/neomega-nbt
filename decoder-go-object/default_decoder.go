@@ -82,26 +82,29 @@ func (d ListValueDecoder) DecodeTo(_ nbt.ValuePos, encoder nbt.EncoderHighLevel,
 	val := d.val
 	elem := val.Type().Elem()
 	n := val.Len()
-	et := ReflectKindToHighLevelValueType(elem.Kind(), func() reflect.Type { return elem.Elem() }, d.opt.SliceAsArray, d.opt.IntAsInt64)
-	typeCheck := false
+	et := ReflectKindToHighLevelValueType(elem.Kind(), func() reflect.Type { return elem }, d.opt.SliceAsArray, d.opt.IntAsInt64)
+	// Nonempty lists take their wire type from the child decoder, including overrides.
+	// The reflected Go kind alone may describe a different NBT representation.
 	typeErase := false
-	if et == nbt.Invalid {
-		if n == 0 { // 当元素长度为 0 时，类型推断也无从提起
+	if n > 0 {
+		first, err := decodeChild(val.Index(0).Interface())
+		if err != nil {
+			return err
+		}
+		et = first.GetNBType()
+		typeErase = elem.Kind() == reflect.Interface && encoder.HasFlag(nbt.FLAG_SUPPORT_TYPE_ERASE)
+	} else if elem.Implements(reflect.TypeOf((*DecoderOverride)(nil)).Elem()) && elem.Kind() != reflect.Pointer {
+		et = reflect.Zero(elem).Interface().(DecoderOverride).GetNBType()
+	}
+	if !et.IsValid() {
+		if n == 0 {
 			return encoder.BeginAndEndComplexEmptyList()
 		}
-		// 否则，就从第一个元素推断实际类型
-		fisrtElem := val.Index(0).Interface()
-		_, _, _, et = UnpackAny(fisrtElem, d.opt.SliceAsArray, d.opt.IntAsInt64)
-		// 如果第一个元素类型也不知道，就万策尽了
-		if et == nbt.Invalid {
-			return fmt.Errorf("unaccaptable type %v to nbt list element", elem)
-		}
-		if encoder.HasFlag(nbt.FLAG_SUPPORT_TYPE_ERASE) {
-			typeErase = true
-			// 如果支持类型擦除，就无需检查每个的类型
-		} else {
-			typeCheck = true
-		}
+		return fmt.Errorf("unacceptable type %v to nbt list element", elem)
+	}
+	typeCheck := !typeErase
+	if n == 0 {
+		return encoder.BeginAndEndComplexEmptyTypedList(et)
 	}
 	if err := encoder.BeginComplexList(et, n, typeErase); err != nil {
 		return err
@@ -146,6 +149,9 @@ func (d ArrayValueDecoder) DecodeTo(_ nbt.ValuePos, encoder nbt.EncoderHighLevel
 	if et == nbt.Invalid {
 		return fmt.Errorf("unaccaptable array element type  %v", val.Type().Elem())
 	}
+	if n == 0 {
+		return encoder.BeginAndEndComplexEmptyArray(et)
+	}
 	if err := encoder.BeginComplexArray(et, n); err != nil {
 		return err
 	}
@@ -155,7 +161,9 @@ func (d ArrayValueDecoder) DecodeTo(_ nbt.ValuePos, encoder nbt.EncoderHighLevel
 				return err
 			}
 		}
-		write(i)
+		if err := write(i); err != nil {
+			return err
+		}
 	}
 	return encoder.EndComplexArray()
 }

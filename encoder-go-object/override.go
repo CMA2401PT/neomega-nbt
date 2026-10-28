@@ -40,6 +40,8 @@ type CompoundConstructor interface {
 type ListConstructor interface {
 	// 如果 decoder 报告这个 list 类型未知，且长度为 0，这个函数会被调用
 	NonTypedEmptyList() error
+	// 已知元素类型的空列表，不会再调用 GetReusableElementPointer 或 OnListFinish。
+	TypedEmptyList(valueType nbt.HighLevelValueType) error
 	// 开始时被调用一次，这个接收器会被反复使用
 	// len 是列表总长度
 	// 若支持非固定长度列表，例如实际长度未知，则可设置 nbt.FLAG_OMIT_LIST_LEN
@@ -54,6 +56,8 @@ type ListConstructor interface {
 }
 
 type ArrayConstructor interface {
+	// 空数组，不会再调用 GetReusableElementPointer 或 OnArrayFinish。
+	EmptyArray(valueType nbt.HighLevelValueType) error
 	GetReusableElementPointer(valueType nbt.HighLevelValueType, len int) (any, error)
 	OnNextElement() error
 	OnArrayFinish() error

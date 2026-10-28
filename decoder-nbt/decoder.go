@@ -33,7 +33,7 @@ func Decode[R seq_io.Reader, E Encoding[R]](r R, e nbt.Encoder) (err error) {
 
 	err = e.WriteType(t)
 	if err != nil {
-		return BufferOverrunError{Op: "ReadTag"}
+		return err
 	}
 
 	tagName, err = enc.String(r)
@@ -99,6 +99,9 @@ func decodeValue[R seq_io.Reader, E Encoding[R]](r R, e nbt.Encoder, t nbt.TagTy
 		if err != nil {
 			return err
 		}
+		if length < 0 {
+			return fmt.Errorf("negative NBT array length: %d", length)
+		}
 		err = e.WriteLen(uint32(length))
 		if err != nil {
 			return err
@@ -119,6 +122,9 @@ func decodeValue[R seq_io.Reader, E Encoding[R]](r R, e nbt.Encoder, t nbt.TagTy
 		if err != nil {
 			return err
 		}
+		if length < 0 {
+			return fmt.Errorf("negative NBT array length: %d", length)
+		}
 		err = e.WriteLen(uint32(length))
 		if err != nil {
 			return err
@@ -138,6 +144,9 @@ func decodeValue[R seq_io.Reader, E Encoding[R]](r R, e nbt.Encoder, t nbt.TagTy
 		length, err := enc.Int32(r)
 		if err != nil {
 			return err
+		}
+		if length < 0 {
+			return fmt.Errorf("negative NBT array length: %d", length)
 		}
 		err = e.WriteLen(uint32(length))
 		if err != nil {
@@ -165,6 +174,9 @@ func decodeValue[R seq_io.Reader, E Encoding[R]](r R, e nbt.Encoder, t nbt.TagTy
 		listLength, err = enc.Int32(r)
 		if err != nil {
 			return err
+		}
+		if listLength < 0 {
+			return fmt.Errorf("negative NBT list length: %d", listLength)
 		}
 		if listType == nbt.TagEnd {
 			if listLength != 0 {
@@ -202,7 +214,7 @@ func decodeValue[R seq_io.Reader, E Encoding[R]](r R, e nbt.Encoder, t nbt.TagTy
 
 			err = e.WriteType(t)
 			if err != nil {
-				return BufferOverrunError{Op: "ReadTag"}
+				return err
 			}
 
 			tagName, err = enc.String(r)

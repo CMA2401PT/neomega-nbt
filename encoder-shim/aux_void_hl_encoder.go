@@ -36,3 +36,8 @@ func (VoidEncoderHighLevel) WriteFloat32(float32, nbt.ValuePos) error { return n
 func (VoidEncoderHighLevel) WriteFloat64(float64, nbt.ValuePos) error { return nil }
 func (VoidEncoderHighLevel) WriteString(string, nbt.ValuePos) error   { return nil }
 func (VoidEncoderHighLevel) HasFlag(flag nbt.Flag) bool               { return false }
+
+func (VoidEncoderHighLevel) BeginAndEndComplexEmptyTypedList(nbt.HighLevelValueType) error {
+	return nil
+}
+func (VoidEncoderHighLevel) BeginAndEndComplexEmptyArray(nbt.HighLevelValueType) error { return nil }
