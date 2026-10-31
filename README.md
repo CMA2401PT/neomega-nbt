@@ -121,7 +121,7 @@ func main() {
 | SNBT 文本 → NBT 字节 | `SNBTToNBT(text, OptSNBTToNBT) ([]byte, error)` |
 | 更换 NBT 二进制编码 | `ConvertNBT(data, from, to) ([]byte, error)` |
 
-Go 与 NBT 之间另有 `EncodeToNBT(data, writer, opt)` 和 `DecodeFromNBT(reader, ptr, opt)`，用于 `io.Writer`、`io.Reader`。流读取只消耗一个根值，可以连续读取多个根值。字节入口也只解析一个根值，不检查其后的内容。
+Go 与 NBT 之间另有 `EncodeToNBT(data, writer, opt)` 和 `DecodeFromNBT(reader, ptr, opt)`，用于 `io.Writer`、`io.Reader`。流读取只消耗一个根值，可以连续读取多个根值。`DecodeFromNBTBytes` 也只解析一个根值，不检查其后的内容。
 
 NBT 的编码必须显式指定，零值会返回错误：
 
@@ -153,9 +153,26 @@ NBT 的 List 与数值数组是不同的类型。List 统一声明元素类型�
 
 读取 SNBT 时，接收端若允许列表元素变换类型，列表可以构造成 `[]any`。例如 `[1, "two"]` 可以读入 `[]any`，但不能直接写成二进制 NBT 的 List，因为二进制列表要求所有元素具有同一个 NBT 类型。
 
+### 编辑带根名称的文档
+
+编辑未知字段较多的 NBT 时，需要同时保留根名称和各字段的标签类型。`presets/v1.Document` 将根名称与 Compound 放在一起，`DecodeDocument(data, encoding)` 要求字节中恰好包含一个 Compound 根。`ReadDocument(reader, encoding)` 只消费一个根，适合连续记录。修改 `document.Value` 后，用 `EncodeDocument(document, encoding)` 写回。连续根记录可以使用 `DecodeDocuments` 和 `EncodeDocuments` 批量读写。
+
+Document 使用默认的 Go 类型映射：slice 表示 List，数值定长数组表示 NBT Array。因此，同一个文档中的 Int List 和 IntArray 可以分别保留。`Array(values)` 从数值 slice 构造显式数组，`ArrayValues[T](value)` 将解码后的数组复制为 slice。`Compounds(value)` 读取 Compound 列表，也接受没有元素类型的空列表。
+
+```go
+document, err := preset.DecodeDocument(data, preset.EncodingBigEndian)
+if err != nil {
+    return err
+}
+document.Value["values"] = preset.Array([]int32{1, 2, 3})
+updated, err := preset.EncodeDocument(document, preset.EncodingBigEndian)
+```
+
+重新编码保留根名称和标签类型；Go map 的字段顺序可以变化。需要保持 Compound 字段顺序的纯编码转换，使用 `ConvertNBT`。
+
 ### 为什么经过 SNBT 后不一定得到相同字节
 
-SNBT 没有二进制 NBT 的根标签名，所以 `NBTToSNBT` 会丢弃它；`SNBTToNBT` 使用 `OptSNBTToNBT.RootTag` 指定新名字，默认是空字符串。Go 对象接收端同样忽略根标签名，写入端通过源选项 `RootTag` 指定名字。
+SNBT 没有二进制 NBT 的根标签名，所以 `NBTToSNBT` 会丢弃它；`SNBTToNBT` 使用 `OptSNBTToNBT.RootTag` 指定新名字，默认是空字符串。通用 Go 对象接收端忽略根标签名，写入端通过源选项 `RootTag` 指定名字；`Document` 入口会另行保存和恢复根名称。
 
 SNBT 的 `[]` 也不记录空列表的元素类型。因此，有类型的空列表经过 SNBT 后只剩“空列表”。如果需要保留根名、标签类型和 Compound 字段顺序，应直接使用 `ConvertNBT`。它翻译二进制事件，不经过 Go map 或文本表示。
 
