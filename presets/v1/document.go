@@ -62,12 +62,13 @@ func EncodeDocument(d Document, encoding Encoding) ([]byte, error) {
 	return EncodeToNBTBytes(d.Value, opt)
 }
 
-// Compounds accepts a compound list, including NBT's untyped empty list.
+// Compounds accepts a compound list or any empty List, whose element type has
+// no values to constrain. NBT Arrays remain distinct, including empty Arrays.
 func Compounds(value any) ([]Compound, bool) {
 	if values, ok := value.([]Compound); ok {
 		return values, true
 	}
-	if values, ok := value.([]any); ok && len(values) == 0 {
+	if values := reflect.ValueOf(value); values.IsValid() && values.Kind() == reflect.Slice && values.Len() == 0 {
 		return nil, true
 	}
 	return nil, false

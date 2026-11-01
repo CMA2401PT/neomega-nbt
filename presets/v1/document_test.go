@@ -45,3 +45,24 @@ func TestDocumentRetainsRootAndContainerTypes(t *testing.T) {
 		}
 	}
 }
+
+func TestCompoundsAcceptsEmptyListsButNotArrays(t *testing.T) {
+	for _, value := range []any{[]byte{}, []int32{}, []string{}, []any{}, []Compound{}, []Compound{{"id": "test"}}} {
+		raw, err := EncodeDocument(Document{Value: Compound{"value": value}}, EncodingBigEndian)
+		if err != nil {
+			t.Fatal(err)
+		}
+		doc, err := DecodeDocument(raw, EncodingBigEndian)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := Compounds(doc.Value["value"]); !ok {
+			t.Fatalf("rejected list %T", value)
+		}
+	}
+	for _, value := range []any{Array([]byte{}), Array([]int32{}), []byte{1}, []string{"x"}, []any{Compound{}}, Compound{}, "", nil} {
+		if _, ok := Compounds(value); ok {
+			t.Fatalf("accepted non-compound list or non-list %T", value)
+		}
+	}
+}
