@@ -4,106 +4,34 @@
 
 这个库把转换拆成两件事：**读取源数据，发出一串操作；接收这些操作，生成目标数据。** 例如，把 NBT 转成 SNBT 时，二进制读取器可以直接驱动文本生成器，不必先构造一棵 `map[string]any` 数据树。常用的组合已经放在 `presets/v1`，普通调用者可以直接使用。
 
-## 为什么要拆开读取与生成
+## 运行第一个例子
 
-假设我们先实现了 Go 对象与 NBT 的互转，接着又需要 SNBT、不同字节序，以及业务自己的对象类型。如果每一种转换都单独实现，遍历树、识别类型、处理容器等逻辑就会重复出现。
-
-这里选择让各模块共享一套操作约定。读取端只描述“读到了什么”，生成端只负责“怎样保存它”。因此，新写一个读取端，就可以接到已有的生成端；新写一个生成端，也可以接收已有读取端的数据。
-
-以 `{level: 3}` 为例，先忽略类型和错误处理，过程可以理解为：
-
-```text
-读取源数据                  接收端生成目标数据
-开始 Compound       ────→   建立对象，或者写入左花括号
-字段 level，值为 3    ────→   保存字段，或者写入文本
-结束 Compound       ────→   完成对象，或者写入右花括号
-```
-
-代码中的 `decoder-*` 是读取端，`encoder-*` 是生成端。这里的名称是相对于数据流而言的：`decoder-go-object` 读取 Go 对象，`encoder-go-object` 构造 Go 对象。这也解释了为什么“把 NBT 解码进 Go 对象”会用到 Go 对象的 **encoder**。
-
-## 为什么有两套操作接口
-
-共享操作不意味着所有格式都适合相同粒度的接口。二进制格式关心类型、长度和字节顺序；构造 Go 对象或输出文本时，更希望直接知道“容器开始了”“下一个元素到了”“容器结束了”。
-
-因此，根包定义了两个接收接口：
-
-- `Encoder` 是低层接口，接收 `WriteType`、`WriteTag`、`WriteLen`、`WriteInt32` 等顺序操作。它接近二进制 NBT 的布局。
-- `EncoderHighLevel` 是高层接口，接收容器的 Begin / Next / End，以及带位置信息的值。它适合构造对象和生成文本。`ValuePos` 表示当前值位于根或 Compound、List、还是数值数组中。
-
-例如，低层接口写一个有名字的整数，需要按顺序调用 `WriteType(TagInt)`、`WriteTag("level")`、`WriteInt32(3)`。高层接口则先报告字段的名字与类型，再交付整数值。
-
-为了让两种接口可以互接，库提供两个适配器。适配器只翻译操作，不建立完整的中间数据树：
-
-| 数据路径 | 连接方式 |
-| --- | --- |
-| Go 对象 → SNBT | `decoder-go-object` → `encoder-snbt`，直接使用高层操作 |
-| NBT → Go 对象或 SNBT | `decoder-nbt` → `encoder-shim` → 对应高层生成端 |
-| Go 对象或 SNBT → NBT | 对应高层读取端 → `decoder-shim` → `encoder-nbt` |
-| 一种 NBT 编码 → 另一种 NBT 编码 | `decoder-nbt` → `encoder-nbt`，直接使用低层操作 |
-
-`encoder-shim` 用状态机和栈补出容器边界。比如，低层读完列表声明的元素数量后，它会发出高层的列表结束操作。`decoder-shim` 做相反的工作，把高层容器事件展开为低层操作。
-
-## 先完成一次转换
-
-理解这些模块有助于扩展，但使用现成转换时无需手工连接它们。`presets/v1` 已经负责选择编码器和适配器。
-
-项目的 `go.mod` 声明 Go 1.25.5，模块路径为 `neomega-nbt`。在旁边新建一个示例项目时，可以用本地替换接入：
+模块路径是 `neomega-nbt`，要求 Go 1.25.5。克隆工作区后，在本模块目录运行：
 
 ```sh
-# 在存放 neomega-nbt 的父目录执行。
-mkdir nbt-demo
-cd nbt-demo
-go mod init example.com/nbt-demo
-go mod edit -require=neomega-nbt@v0.0.0
-go mod edit -replace=neomega-nbt=../neomega-nbt
+go run ./examples/roundtrip
 ```
 
-把下面的程序保存为 `main.go`，运行 `GOWORK=off go run .`。这个程序把 Go 结构体写成小端 NBT，再读回结构体，最后输出便于查看的 SNBT。
-
-```go
-package main
-
-import (
-    "fmt"
-
-    preset "neomega-nbt/presets/v1"
-)
-
-func main() {
-    type Block struct {
-        Name  string `nbt:"name"`
-        Level int32  `nbt:"level"`
-    }
-    input := Block{Name: "stone", Level: 3}
-
-    data, err := preset.EncodeToNBTBytes(input, preset.OptEncodeToNBT{
-        Encoding: preset.EncodingLittleEndian,
-    })
-    if err != nil {
-        panic(err)
-    }
-
-    var output Block
-    err = preset.DecodeFromNBTBytes(data, &output, preset.OptDecodeFromNBT{
-        Encoding: preset.EncodingLittleEndian,
-    })
-    if err != nil {
-        panic(err)
-    }
-
-    text, err := preset.EncodeToSNBT(output, preset.OptEncodeToSNBT{})
-    if err != nil {
-        panic(err)
-    }
-    fmt.Println(text)
-}
-```
-
-输出：
+[`examples/roundtrip/main.go`](examples/roundtrip/main.go) 把带 `nbt` 字段标签的 Go 结构体写成小端 NBT，再读回结构体并显示 SNBT。命令输出：
 
 ```text
 {"name": "stone", "level": 3}
 ```
+
+要修改带根名称的未知字段文档，运行第二个例子：
+
+```sh
+go run ./examples/document
+```
+
+[`examples/document/main.go`](examples/document/main.go) 创建大端文档，再解码、修改并写回，分别演示 Int List 和 IntArray。命令输出：
+
+```text
+根名称：Level
+{"array": [I; 1, 2, 3], "level": 4, "list": [1, 2, 3]}
+```
+
+在工作区以外的项目使用本地源码时，在调用方的 `go.mod` 中添加 `require neomega-nbt v0.0.0` 和指向本模块目录的 `replace neomega-nbt => ../neomega-nbt`，路径按实际位置调整。
 
 传入 Go 接收目标时，要提供指向目标的指针。已有结构体可以限定字段类型；没有预先定义的数据结构时，可以传入 `&value`，其中 `value` 声明为 `any`。
 
@@ -159,14 +87,7 @@ NBT 的 List 与数值数组是不同的类型。List 统一声明元素类型�
 
 Document 使用默认的 Go 类型映射：slice 表示 List，数值定长数组表示 NBT Array。因此，同一个文档中的 Int List 和 IntArray 可以分别保留。`Array(values)` 从数值 slice 构造显式数组，`ArrayValues[T](value)` 将解码后的数组复制为 slice。`Compounds(value)` 读取 Compound 列表，也接受没有元素类型的空列表。
 
-```go
-document, err := preset.DecodeDocument(data, preset.EncodingBigEndian)
-if err != nil {
-    return err
-}
-document.Value["values"] = preset.Array([]int32{1, 2, 3})
-updated, err := preset.EncodeDocument(document, preset.EncodingBigEndian)
-```
+完整的创建、解码、修改和写回流程见 [`examples/document/main.go`](examples/document/main.go)。
 
 重新编码保留根名称和标签类型；Go map 的字段顺序可以变化。需要保持 Compound 字段顺序的纯编码转换，使用 `ConvertNBT`。
 
@@ -178,135 +99,12 @@ SNBT 的 `[]` 也不记录空列表的元素类型。因此，有类型的空列
 
 转换函数遇到错误会立即返回。写入流或填充 Go 对象时，失败之前可能已经产生部分结果；如需成功后才替换原对象，应先解码到临时变量。
 
-## 扩展自己的 Go 类型
+## 自定义类型与格式
 
-现成的类型映射不一定符合业务含义。例如，Go 中的距离可能用浮点数表示，而保存格式要求以千分之一格为单位的整数。这时只需覆盖这个类型的转换方式，无需重写 NBT 或 SNBT 编码器。
-
-源值实现 `decoder-go-object.DecoderOverride`，报告自己的 NBT 类型并向接收端交付数据。目标指针实现 `encoder-go-object.EncoderOverride`，提供接收这个 NBT 类型的方法。下面的 `Distance` 在 Go 中是浮点距离，在 NBT/SNBT 中是 Int：
-
-```go
-package main
-
-import (
-    "fmt"
-
-    nbt "neomega-nbt"
-    decoder_go "neomega-nbt/decoder-go-object"
-    encoder_go "neomega-nbt/encoder-go-object"
-    preset "neomega-nbt/presets/v1"
-)
-
-type Distance float64
-
-func (Distance) GetNBType() nbt.HighLevelValueType {
-    return nbt.TrivialInt
-}
-
-func (d Distance) DecodeTo(
-    pos nbt.ValuePos,
-    encoder nbt.EncoderHighLevel,
-    _ decoder_go.GetDecoderFunc,
-) error {
-    return encoder.WriteInt32(int32(d*1000), pos)
-}
-
-func (d *Distance) GetReciver(
-    valueType nbt.HighLevelValueType,
-) (encoder_go.ValueReciver, error) {
-    if valueType != nbt.TrivialInt {
-        return encoder_go.ValueReciver{}, fmt.Errorf("Distance expects Int, got %v", valueType)
-    }
-    return encoder_go.ValueReciver{
-        TrivialValReciver: func(_ any, value int64) error {
-            *d = Distance(value) / 1000
-            return nil
-        },
-    }, nil
-}
-
-func main() {
-    text, err := preset.EncodeToSNBT(Distance(1.25), preset.OptEncodeToSNBT{})
-    if err != nil {
-        panic(err)
-    }
-    var distance Distance
-    if err := preset.DecodeFromSNBT(text, &distance, preset.OptDecodeFromSNBT{}); err != nil {
-        panic(err)
-    }
-    fmt.Println(text, distance) // 1250 1.25
-}
-```
-
-这里保留了接口中的 `GetReciver`、`ValueReciver` 拼写。示例里的精度和范围由 `Distance` 的业务约定负责；库只负责传递它声明的 Int。
-
-### 自定义容器为什么还需要构造器
-
-简单值可以一次交付，但 map、列表或业务容器通常要逐个填充。接收端因此通过 `ValueReciver` 提供 `CompoundConstructor`、`ListConstructor` 或 `ArrayConstructor`。构造器决定子值写到哪里，以及什么时候把暂存值放进容器。
-
-普通非空容器的约定是：
-
-1. Compound 通过 `GetTagPointer` 提供当前字段的目标。List 和 Array 通过 `GetReusableElementPointer` 提供可以重复使用的元素目标。
-2. 当下一个元素到来时，`OnNextElement` 提交前一个元素。接收端随后把下一个值写入目标。
-3. `OnCompoundFinish`、`OnListFinish` 或 `OnArrayFinish` 提交最后一个元素，并完成容器。
-
-对于空 Compound，仍会调用开始和结束；构造器需要知道没有取过任何字段目标。空列表与空数组则走下面的专用路径，不会提交暂存元素。
-
-## 扩展操作流或新的格式
-
-当变化涉及整个格式，而不只是一个 Go 类型时，就应该直接接入操作接口。一个新读取端遍历自己的数据并调用接收接口；一个新生成端实现接收接口。若两端的层级不同，再选择前文的适配器。
-
-高层容器通常按以下顺序工作。`Next` 表示两个元素之间的分隔，而不是一次值写入：
-
-```text
-BeginComplexList(元素类型, 长度, 是否允许类型变化)
-    第一个元素
-NextListElement(下一个元素类型)
-    第二个元素
-EndComplexList()
-```
-
-读取端必须传播接收端返回的错误，并报告与实际数据一致的类型。对于自定义 Go 容器的读取，`DecodeTo` 收到的 `getChildDecoder` 可以继续处理子值，包括子值自己的 override。
-
-### 长度未知时如何继续
-
-读取文本时，通常还没走到 `]` 就要开始输出列表。但二进制 NBT 要求先写长度。接收端通过 `HasFlag` 表达自己是否能接受这些情况：
-
-- `FLAG_OMIT_LIST_LEN`：允许列表长度只是占位值，实际数量由收到的元素决定。
-- `FLAG_OMIT_ARRAY_LEN`：对数值数组提供同样的能力。
-- `FLAG_SUPPORT_TYPE_ERASE`：允许列表元素的实际类型变化，后续类型由 `NextListElement` 报告。
-
-SNBT 读取端会根据接收端能力决定是否先扫描以计算长度。因此，操作流能避免完整的中间对象树，但并不保证所有转换都只扫描一次。
-
-### 已知为空时为什么要用专用算子
-
-如果允许未知长度，`BeginComplexList(type, 0, ...)` 的 `0` 就可能只是占位值，不能同时用它断言容器为空。专用空值算子让接收端明确知道“没有任何元素要提交”，并保留已有的非空容器提交约定：
-
-| 高层操作 | 含义 | Go 容器构造器收到的操作 |
-| --- | --- | --- |
-| `BeginAndEndComplexEmptyList()` | 空列表，元素类型未知 | `NonTypedEmptyList()` |
-| `BeginAndEndComplexEmptyTypedList(type)` | 空列表，元素类型已知 | `TypedEmptyList(type)` |
-| `BeginAndEndComplexEmptyArray(type)` | 空数值数组，元素类型为 Byte、Int 或 Long | `EmptyArray(type)` |
-
-专用算子一次完成容器，后面不再追加该容器的 Begin / Next / End。`encoder-shim` 会把二进制的零长度列表和数组转换成对应空值算子。自定义高层生成端和 Go 容器构造器也需要实现相应方法。
-
-## 从哪里继续阅读代码
-
-理解数据流后，可以按需要进入对应实现，而不必从所有接口开始读：
-
-- 想组合现有转换：从 [`presets/v1`](presets/v1) 看各路径的连接方式。
-- 想添加 Go 类型映射：从 [`decoder-go-object/override.go`](decoder-go-object/override.go) 和 [`encoder-go-object/override.go`](encoder-go-object/override.go) 看扩展接口。
-- 想添加新格式：从 [`nbt.go`](nbt.go) 看操作约定，再对照 [`decoder-shim`](decoder-shim) 与 [`encoder-shim`](encoder-shim)。
-- 想添加二进制编码：分别实现 [`decoder-nbt/encoding.go`](decoder-nbt/encoding.go) 和 [`encoder-nbt/encoding.go`](encoder-nbt/encoding.go) 的 `Encoding` 接口。它们把整数、浮点数、字符串的字节布局与树的遍历分开。`seq-io` 提供完整读写一段字节的接口与适配器。
-
-## 验证修改
-
-转换修改最容易影响其他组合，因此测试不仅检查单个值，还覆盖三种二进制编码、文本与对象的往返、嵌套容器、空值算子、自定义类型和错误传播。固定字节样例用于避免读写两端犯同一个错误而让往返测试误通过。
-
-在仓库根目录运行：
+业务类型可以实现 [`decoder-go-object.DecoderOverride`](decoder-go-object/override.go)，决定怎样从 Go 值发出 NBT 操作；目标指针可以实现 [`encoder-go-object.EncoderOverride`](encoder-go-object/override.go)，决定怎样接收操作。名称按数据流命名，因此“把 NBT 读入 Go”会用到 Go 对象的 encoder。可运行的自定义距离类型示例见 [`presets/v1/example_test.go`](presets/v1/example_test.go)。在模块目录执行：
 
 ```sh
-GOWORK=off go test ./...
-GOWORK=off go vet ./...
+go test ./presets/v1 -run Example_customValue -v
 ```
 
-`GOWORK=off` 让命令只使用本模块，避免父目录工作区中的其他模块影响测试。README 的基础用法与自定义类型示例也保存在 [`presets/v1/example_test.go`](presets/v1/example_test.go)，作为可运行的示例测试。
+需要接入整个新格式时，根包的 `Encoder` 定义低层顺序操作，`EncoderHighLevel` 定义高层容器事件，两个 shim 负责互相适配。公共协议、空容器约定、源码分层和验收命令见 [AGENTS.md](AGENTS.md)。
