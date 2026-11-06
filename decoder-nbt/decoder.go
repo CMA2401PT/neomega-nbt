@@ -102,6 +102,12 @@ func decodeValue[R seq_io.Reader, E Encoding[R]](r R, e nbt.Encoder, t nbt.TagTy
 		if length < 0 {
 			return fmt.Errorf("negative NBT array length: %d", length)
 		}
+		if consumer, ok := e.(nbt.ByteArrayConsumer); ok {
+			if handled, err := consumer.ConsumeByteArray(int(length), r.Read); handled || err != nil {
+				return err
+			}
+		}
+
 		err = e.WriteLen(uint32(length))
 		if err != nil {
 			return err

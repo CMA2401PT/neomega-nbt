@@ -134,3 +134,11 @@ type WriteTrivialWithPos interface {
 	WriteFloat64(float64, ValuePos) error
 	WriteString(string, ValuePos) error
 }
+
+// ByteArrayConsumer 可选地整段接收 ByteArray，供接收端边读边处理大型数组。
+// read 必须读满传入的缓冲；接收端可反复使用固定大小的缓冲。
+// 返回 handled=true 时必须恰好消费 length 字节；false 时不得读取或改变接收状态。
+// 该操作替代数组的长度、元素和结束事件，不改变其他容器的事件顺序。
+type ByteArrayConsumer interface {
+	ConsumeByteArray(length int, read func([]byte) error) (handled bool, err error)
+}

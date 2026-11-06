@@ -293,3 +293,19 @@ func (fa *EncoderShim[HL]) WriteNormalValue(expect EncodeState) error {
 	}
 	return fa.UnexpectError()
 }
+
+// ConsumeByteArray 让支持流式数组的高层接收端直接消费载荷，结束后恢复父容器状态。
+func (fa *EncoderShim[HL]) ConsumeByteArray(length int, read func([]byte) error) (bool, error) {
+	if fa.EncodeState != EncodeStateByteArray || fa.Aux != 0 {
+		return false, fa.UnexpectError()
+	}
+	consumer, ok := any(fa.HighLevelEncoder).(nbt.ByteArrayConsumer)
+	if !ok {
+		return false, nil
+	}
+	handled, err := consumer.ConsumeByteArray(length, read)
+	if err != nil || !handled {
+		return handled, err
+	}
+	return true, fa.Pop()
+}

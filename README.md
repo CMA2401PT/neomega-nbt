@@ -107,4 +107,8 @@ SNBT 的 `[]` 也不记录空列表的元素类型。因此，有类型的空列
 go test ./presets/v1 -run Example_customValue -v
 ```
 
+读取大型数组时，让字段指针实现 `EncoderOverride` 并返回自己的数组构造器。构造器可以重复使用一个元素目标，收到值就处理，完全不建立切片。`DecodeFromNBT` 的 reader 可以直接连接 gzip 解压器，因此解压与业务处理自然交替进行。
+
+ByteArray 的逐字节事件有额外调用成本。接收器还可实现根包的可选 `ByteArrayConsumer`：`ConsumeByteArray(length, read) (handled, err)`。它可以用固定大小的缓冲反复调用 `read`，每次读满该缓冲。返回 true 时必须恰好消费 length 字节，且自行完成数组；返回 false 时不能读数据或改变状态，库会继续走普通数组事件。这个优化仅用于二进制 ByteArray，不改变 IntArray、LongArray 或 SNBT 的原有路径。组合回归见 [stream_array_test.go](presets/v1/stream_array_test.go)。
+
 需要接入整个新格式时，根包的 `Encoder` 定义低层顺序操作，`EncoderHighLevel` 定义高层容器事件，两个 shim 负责互相适配。公共协议、空容器约定、源码分层和验收命令见 [AGENTS.md](AGENTS.md)。

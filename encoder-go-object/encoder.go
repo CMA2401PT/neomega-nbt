@@ -252,3 +252,12 @@ func (e *GoObjEncoder) BeginAndEndComplexEmptyArray(valueType nbt.HighLevelValue
 	}
 	return e.Current.ArrayConstructor.EmptyArray(valueType)
 }
+
+// ConsumeByteArray 将整段字节流交给字段的自定义接收器；普通 slice 沿用逐元素构造。
+func (e *GoObjEncoder) ConsumeByteArray(length int, read func([]byte) error) (bool, error) {
+	consumer, ok := e.Current.PtrToData.(nbt.ByteArrayConsumer)
+	if !ok {
+		return false, nil
+	}
+	return consumer.ConsumeByteArray(length, read)
+}
